@@ -2,6 +2,8 @@
 
 Convert `.env` files to 1Password Secure Notes and generate template files for `op inject` and `op run`.
 
+![env2op demo](demo/env2op-demo.gif)
+
 ## Installation
 
 ```bash

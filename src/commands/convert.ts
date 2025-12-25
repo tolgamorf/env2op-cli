@@ -11,7 +11,7 @@ import {
     vaultExists,
 } from "../core/onepassword";
 import { generateTemplateContent, generateUsageInstructions, writeTemplate } from "../core/template-generator";
-import type { ConvertOptions } from "../core/types";
+import type { ConvertOptions, CreateItemResult } from "../core/types";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
 
@@ -41,6 +41,8 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
         }
 
         // Step 2: Create 1Password Secure Note
+        let itemResult: CreateItemResult | null = null;
+
         if (dryRun) {
             logger.warn("Would create Secure Note");
             logger.keyValue("Vault", vault);
@@ -70,7 +72,9 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             // Check if vault exists
             const vaultFound = await vaultExists(vault);
 
-            if (!vaultFound) {
+            if (vaultFound) {
+                logger.success(`Vault "${vault}" found`);
+            } else {
                 if (yes) {
                     // Auto-create vault
                     logger.warn(`Vault "${vault}" not found, creating...`);
@@ -122,14 +126,14 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             spinner.start("Creating 1Password Secure Note...");
 
             try {
-                const result = await createSecureNote({
+                itemResult = await createSecureNote({
                     vault,
                     title: itemName,
                     fields: variables,
                     secret,
                 });
 
-                spinner.stop(`Created "${result.title}" in vault "${result.vault}"`);
+                spinner.stop(`Created "${itemResult.title}" in vault "${itemResult.vault}"`);
             } catch (error) {
                 spinner.stop("Failed to create Secure Note");
                 throw error;
@@ -139,19 +143,20 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
         // Step 3: Generate template file
         const templateFileName = `${basename(envFile)}.tpl`;
         const templatePath = join(dirname(envFile), templateFileName);
-        const templateContent = generateTemplateContent(
-            {
-                vault,
-                itemTitle: itemName,
-                variables,
-                lines,
-            },
-            templateFileName,
-        );
 
         if (dryRun) {
             logger.warn(`Would generate template: ${templatePath}`);
-        } else {
+        } else if (itemResult) {
+            const templateContent = generateTemplateContent(
+                {
+                    vaultId: itemResult.vaultId,
+                    itemId: itemResult.id,
+                    variables,
+                    lines,
+                    fieldIds: itemResult.fieldIds,
+                },
+                templateFileName,
+            );
             writeTemplate(templateContent, templatePath);
             logger.success(`Generated template: ${templatePath}`);
         }

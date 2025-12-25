@@ -76,10 +76,22 @@ export async function createSecureNote(options: CreateItemOptions): Promise<Crea
         // Execute op command
         const result = await $`op ${args}`.json();
 
+        // Extract field IDs mapped by label
+        const fieldIds: Record<string, string> = {};
+        if (Array.isArray(result.fields)) {
+            for (const field of result.fields) {
+                if (field.label && field.id) {
+                    fieldIds[field.label] = field.id;
+                }
+            }
+        }
+
         return {
             id: result.id,
             title: result.title,
             vault: result.vault?.name ?? vault,
+            vaultId: result.vault?.id ?? "",
+            fieldIds,
         };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

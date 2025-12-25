@@ -56,6 +56,10 @@ export interface CreateItemResult {
     title: string;
     /** Vault name */
     vault: string;
+    /** Vault ID */
+    vaultId: string;
+    /** Field IDs mapped by field label */
+    fieldIds: Record<string, string>;
 }
 
 /**
@@ -80,12 +84,14 @@ export interface ConvertOptions {
  * Options for template generation
  */
 export interface TemplateOptions {
-    /** Vault name */
-    vault: string;
-    /** Item title in 1Password */
-    itemTitle: string;
+    /** Vault ID */
+    vaultId: string;
+    /** Item ID in 1Password */
+    itemId: string;
     /** Variables to include */
     variables: EnvVariable[];
     /** All lines preserving structure */
     lines: EnvLine[];
+    /** Field IDs mapped by field label */
+    fieldIds: Record<string, string>;
 }

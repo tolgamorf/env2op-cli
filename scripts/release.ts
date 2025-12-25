@@ -10,6 +10,16 @@ async function release() {
         process.exit(0);
     }
 
+    // Run checks before releasing
+    console.log("Running checks...");
+    try {
+        await $`bun run typecheck`.quiet();
+        await $`bun run lint`.quiet();
+    } catch {
+        console.log("Checks failed. Fix errors before releasing.");
+        process.exit(0);
+    }
+
     // Read current version
     const pkg = await Bun.file("package.json").json();
     const currentVersion: string = pkg.version;

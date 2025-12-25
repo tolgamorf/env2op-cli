@@ -11,16 +11,16 @@ const flags = new Set<string>();
 const positional: string[] = [];
 
 for (const arg of args) {
-	if (arg.startsWith("--")) {
-		flags.add(arg.slice(2));
-	} else if (arg.startsWith("-")) {
-		// Handle short flags
-		for (const char of arg.slice(1)) {
-			flags.add(char);
-		}
-	} else {
-		positional.push(arg);
-	}
+    if (arg.startsWith("--")) {
+        flags.add(arg.slice(2));
+    } else if (arg.startsWith("-")) {
+        // Handle short flags
+        for (const char of arg.slice(1)) {
+            flags.add(char);
+        }
+    } else {
+        positional.push(arg);
+    }
 }
 
 // Check for help/version flags first
@@ -28,36 +28,36 @@ const hasHelp = flags.has("h") || flags.has("help");
 const hasVersion = flags.has("v") || flags.has("version");
 
 if (hasVersion) {
-	console.log(pkg.version);
-	process.exit(0);
+    console.log(pkg.version);
+    process.exit(0);
 }
 
 if (hasHelp || positional.length === 0) {
-	showHelp();
-	process.exit(0);
+    showHelp();
+    process.exit(0);
 }
 
 if (positional.length < 3) {
-	showMissingArgsError(positional);
-	process.exit(1);
+    showMissingArgsError(positional);
+    process.exit(1);
 }
 
 // All positional args present, run the command
 const [envFile, vault, itemName] = positional as [string, string, string];
 await runConvert({
-	envFile,
-	vault,
-	itemName,
-	dryRun: flags.has("dry-run"),
-	secret: flags.has("secret"),
-	yes: flags.has("y") || flags.has("yes"),
+    envFile,
+    vault,
+    itemName,
+    dryRun: flags.has("dry-run"),
+    secret: flags.has("secret"),
+    yes: flags.has("y") || flags.has("yes"),
 });
 
 function showHelp(): void {
-	const name = pc.bold(pc.cyan("env2op"));
-	const version = pc.dim(`v${pkg.version}`);
+    const name = pc.bold(pc.cyan("env2op"));
+    const version = pc.dim(`v${pkg.version}`);
 
-	console.log(`
+    console.log(`
 ${name} ${version}
 ${pkg.description}
 
@@ -95,13 +95,13 @@ ${pc.bold("DOCUMENTATION")}
 }
 
 function showMissingArgsError(provided: string[]): void {
-	const missing: string[] = [];
+    const missing: string[] = [];
 
-	if (provided.length < 1) missing.push("env_file");
-	if (provided.length < 2) missing.push("vault");
-	if (provided.length < 3) missing.push("item_name");
+    if (provided.length < 1) missing.push("env_file");
+    if (provided.length < 2) missing.push("vault");
+    if (provided.length < 3) missing.push("item_name");
 
-	console.log(`
+    console.log(`
 ${pc.red(pc.bold("Error:"))} Missing required arguments
 
 ${pc.bold("Usage:")} env2op ${pc.yellow("<env_file>")} ${pc.yellow("<vault>")} ${pc.yellow("<item_name>")} ${pc.dim("[options]")}

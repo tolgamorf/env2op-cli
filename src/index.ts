@@ -4,37 +4,34 @@
  * This module exports the core functionality for programmatic use.
  */
 
-// Core types
-export type {
-	EnvVariable,
-	EnvLine,
-	ParseResult,
-	CreateItemOptions,
-	CreateItemResult,
-	ConvertOptions,
-	TemplateOptions,
-} from "./core/types";
-
 // Env parsing
 export { parseEnvFile, validateParseResult } from "./core/env-parser";
-
 // 1Password integration
 export {
-	checkOpCli,
-	checkSignedIn,
-	itemExists,
-	deleteItem,
-	createSecureNote,
-	vaultExists,
-	createVault,
+    checkOpCli,
+    checkSignedIn,
+    createSecureNote,
+    createVault,
+    deleteItem,
+    itemExists,
+    vaultExists,
 } from "./core/onepassword";
-
 // Template generation
 export {
-	generateTemplateContent,
-	writeTemplate,
-	generateUsageInstructions,
+    generateTemplateContent,
+    generateUsageInstructions,
+    writeTemplate,
 } from "./core/template-generator";
+// Core types
+export type {
+    ConvertOptions,
+    CreateItemOptions,
+    CreateItemResult,
+    EnvLine,
+    EnvVariable,
+    ParseResult,
+    TemplateOptions,
+} from "./core/types";
 
 // Errors
 export { Env2OpError, ErrorCodes, errors } from "./utils/errors";

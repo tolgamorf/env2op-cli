@@ -31,7 +31,16 @@ async function release() {
 
     // Update package.json
     pkg.version = newVersion;
-    await Bun.write("package.json", `${JSON.stringify(pkg, null, "\t")}\n`);
+    await Bun.write("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
+
+    // Verify lint still passes after version bump
+    try {
+        await $`bun run lint`.quiet();
+    } catch {
+        console.log("Lint failed after version bump. Aborting release.");
+        await $`git checkout package.json`.quiet();
+        process.exit(0);
+    }
 
     const tag = `v${newVersion}`;
 

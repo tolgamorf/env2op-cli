@@ -13,11 +13,21 @@ export interface EnvVariable {
 }
 
 /**
+ * Represents a line in the .env file (preserves structure)
+ */
+export type EnvLine =
+	| { type: "comment"; content: string }
+	| { type: "empty" }
+	| { type: "variable"; key: string; value: string };
+
+/**
  * Result of parsing an .env file
  */
 export interface ParseResult {
 	/** Successfully parsed variables */
 	variables: EnvVariable[];
+	/** All lines preserving structure */
+	lines: EnvLine[];
 	/** Any parse errors encountered */
 	errors: string[];
 }
@@ -76,4 +86,6 @@ export interface TemplateOptions {
 	itemTitle: string;
 	/** Variables to include */
 	variables: EnvVariable[];
+	/** All lines preserving structure */
+	lines: EnvLine[];
 }

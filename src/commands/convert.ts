@@ -34,7 +34,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 		const parseResult = parseEnvFile(envFile);
 		validateParseResult(parseResult, envFile);
 
-		const { variables } = parseResult;
+		const { variables, lines } = parseResult;
 
 		logger.success(`Parsed ${basename(envFile)}`);
 		logger.message(
@@ -146,13 +146,17 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 		}
 
 		// Step 3: Generate template file
-		const templateContent = generateTemplateContent({
-			vault,
-			itemTitle: itemName,
-			variables,
-		});
-
-		const templatePath = join(dirname(envFile), `${basename(envFile)}.tpl`);
+		const templateFileName = `${basename(envFile)}.tpl`;
+		const templatePath = join(dirname(envFile), templateFileName);
+		const templateContent = generateTemplateContent(
+			{
+				vault,
+				itemTitle: itemName,
+				variables,
+				lines,
+			},
+			templateFileName,
+		);
 
 		if (dryRun) {
 			logger.warn(`Would generate template: ${templatePath}`);

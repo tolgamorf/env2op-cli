@@ -7,6 +7,7 @@
 // Core types
 export type {
 	EnvVariable,
+	EnvLine,
 	ParseResult,
 	CreateItemOptions,
 	CreateItemResult,

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { errors } from "../utils/errors";
-import type { EnvVariable, ParseResult } from "./types";
+import type { EnvLine, EnvVariable, ParseResult } from "./types";
 
 /**
  * Parse a value from an environment variable line
@@ -44,24 +44,27 @@ export function parseEnvFile(filePath: string): ParseResult {
 	}
 
 	const content = readFileSync(filePath, "utf-8");
-	const lines = content.split("\n");
+	const rawLines = content.split("\n");
 	const variables: EnvVariable[] = [];
+	const lines: EnvLine[] = [];
 	const parseErrors: string[] = [];
 	let currentComment = "";
 
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i] ?? "";
+	for (let i = 0; i < rawLines.length; i++) {
+		const line = rawLines[i] ?? "";
 		const trimmed = line.trim();
 		const lineNumber = i + 1;
 
-		// Skip empty lines (reset comment)
+		// Empty lines
 		if (!trimmed) {
+			lines.push({ type: "empty" });
 			currentComment = "";
 			continue;
 		}
 
-		// Capture comments for next variable
+		// Comments (preserve original content including #)
 		if (trimmed.startsWith("#")) {
+			lines.push({ type: "comment", content: line });
 			currentComment = trimmed.slice(1).trim();
 			continue;
 		}
@@ -82,6 +85,7 @@ export function parseEnvFile(filePath: string): ParseResult {
 				line: lineNumber,
 			});
 
+			lines.push({ type: "variable", key, value });
 			currentComment = "";
 		} else if (trimmed.includes("=")) {
 			// Line has = but doesn't match valid key format
@@ -90,7 +94,7 @@ export function parseEnvFile(filePath: string): ParseResult {
 		// Lines without = are silently ignored (could be malformed or intentional)
 	}
 
-	return { variables, errors: parseErrors };
+	return { variables, lines, errors: parseErrors };
 }
 
 /**

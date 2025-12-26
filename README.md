@@ -101,12 +101,12 @@ Creates a 1Password Secure Note with fields:
 - `API_KEY` (text)
 - `DEBUG` (text)
 
-And generates `.env.tpl`:
+And generates `.env.tpl` with UUID-based references (avoids naming conflicts):
 
 ```env
-DATABASE_URL=op://Personal/MyApp Secrets/DATABASE_URL
-API_KEY=op://Personal/MyApp Secrets/API_KEY
-DEBUG=op://Personal/MyApp Secrets/DEBUG
+DATABASE_URL=op://abc123vaultid/xyz789itemid/def456fieldid
+API_KEY=op://abc123vaultid/xyz789itemid/ghi012fieldid
+DEBUG=op://abc123vaultid/xyz789itemid/jkl345fieldid
 ```
 
 ## Programmatic Usage

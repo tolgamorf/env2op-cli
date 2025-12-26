@@ -25,6 +25,8 @@ export const ErrorCodes = {
     ITEM_EXISTS: "ITEM_EXISTS",
     ITEM_CREATE_FAILED: "ITEM_CREATE_FAILED",
     PARSE_ERROR: "PARSE_ERROR",
+    TEMPLATE_NOT_FOUND: "TEMPLATE_NOT_FOUND",
+    INJECT_FAILED: "INJECT_FAILED",
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

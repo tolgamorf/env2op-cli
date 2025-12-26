@@ -13,7 +13,8 @@
     }
   },
   "bin": {
-    "env2op": "src/cli.ts"
+    "env2op": "src/cli.ts",
+    "op2env": "src/op2env-cli.ts"
   },
   "files": [
     "src",

@@ -19,7 +19,7 @@ import { logger } from "../utils/logger";
  * Execute the convert operation
  */
 export async function runConvert(options: ConvertOptions): Promise<void> {
-    const { envFile, vault, itemName, dryRun, secret, yes } = options;
+    const { envFile, vault, itemName, output, dryRun, secret, force } = options;
 
     // Display intro
     const pkg = await import("../../package.json");
@@ -75,7 +75,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             if (vaultFound) {
                 logger.success(`Vault "${vault}" found`);
             } else {
-                if (yes) {
+                if (force) {
                     // Auto-create vault
                     logger.warn(`Vault "${vault}" not found, creating...`);
                     await createVault(vault);
@@ -103,7 +103,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             const exists = await itemExists(vault, itemName);
 
             if (exists) {
-                if (yes) {
+                if (force) {
                     // Auto-accept: delete and recreate
                     logger.warn(`Item "${itemName}" already exists, overwriting...`);
                     await deleteItem(vault, itemName);
@@ -141,8 +141,8 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
         }
 
         // Step 3: Generate template file
-        const templateFileName = `${basename(envFile)}.tpl`;
-        const templatePath = join(dirname(envFile), templateFileName);
+        const templatePath = output ?? join(dirname(envFile), `${basename(envFile)}.tpl`);
+        const templateFileName = basename(templatePath);
 
         if (dryRun) {
             logger.warn(`Would generate template: ${templatePath}`);

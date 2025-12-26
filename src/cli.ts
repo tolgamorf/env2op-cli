@@ -9,9 +9,17 @@ const args = process.argv.slice(2);
 // Parse arguments
 const flags = new Set<string>();
 const positional: string[] = [];
+const options: Record<string, string> = {};
 
-for (const arg of args) {
-    if (arg.startsWith("--")) {
+for (let i = 0; i < args.length; i++) {
+    const arg = args[i] as string;
+    if (arg === "-o" || arg === "--output") {
+        const next = args[i + 1];
+        if (next && !next.startsWith("-")) {
+            options.output = next;
+            i++; // skip next arg
+        }
+    } else if (arg.startsWith("--")) {
         flags.add(arg.slice(2));
     } else if (arg.startsWith("-")) {
         // Handle short flags
@@ -48,9 +56,10 @@ await runConvert({
     envFile,
     vault,
     itemName,
+    output: options.output,
     dryRun: flags.has("dry-run"),
     secret: flags.has("secret"),
-    yes: flags.has("y") || flags.has("yes"),
+    force: flags.has("f") || flags.has("force"),
 });
 
 function showHelp(): void {
@@ -70,15 +79,19 @@ ${pc.bold("ARGUMENTS")}
   ${pc.yellow("item_name")}    Name for the Secure Note in 1Password
 
 ${pc.bold("OPTIONS")}
+  ${pc.cyan("-o, --output")}   Output template path (default: <env_file>.tpl)
+  ${pc.cyan("-f, --force")}    Skip confirmation prompts
   ${pc.cyan("--dry-run")}      Preview actions without executing
   ${pc.cyan("--secret")}       Store all fields as password type (hidden)
-  ${pc.cyan("-y, --yes")}      Skip confirmation prompts (auto-accept)
   ${pc.cyan("-h, --help")}     Show this help message
   ${pc.cyan("-v, --version")}  Show version
 
 ${pc.bold("EXAMPLES")}
   ${pc.dim("# Basic usage")}
   ${pc.cyan("$")} env2op .env.production Personal "MyApp - Production"
+
+  ${pc.dim("# Custom output path")}
+  ${pc.cyan("$")} env2op .env Personal "MyApp" -o secrets.tpl
 
   ${pc.dim("# Preview without making changes")}
   ${pc.cyan("$")} env2op .env Personal "MyApp" --dry-run
@@ -87,10 +100,10 @@ ${pc.bold("EXAMPLES")}
   ${pc.cyan("$")} env2op .env Personal "MyApp" --secret
 
   ${pc.dim("# Skip confirmation prompts (for CI/scripts)")}
-  ${pc.cyan("$")} env2op .env Personal "MyApp" -y
+  ${pc.cyan("$")} env2op .env Personal "MyApp" -f
 
 ${pc.bold("DOCUMENTATION")}
-  ${pc.dim("https://github.com/tolgamorf/env2op")}
+  ${pc.dim("https://github.com/tolgamorf/env2op-cli")}
 `);
 }
 

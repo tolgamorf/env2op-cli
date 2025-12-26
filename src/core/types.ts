@@ -63,7 +63,7 @@ export interface CreateItemResult {
 }
 
 /**
- * Options for the convert command
+ * Options for the convert command (env2op)
  */
 export interface ConvertOptions {
     /** Path to .env file */
@@ -72,12 +72,28 @@ export interface ConvertOptions {
     vault: string;
     /** Secure Note title */
     itemName: string;
+    /** Custom output path for template file */
+    output?: string;
     /** Preview mode - don't make changes */
     dryRun: boolean;
     /** Store all fields as password type */
     secret: boolean;
-    /** Skip confirmation prompts (auto-accept) */
-    yes: boolean;
+    /** Skip confirmation prompts */
+    force: boolean;
+}
+
+/**
+ * Options for the inject command (op2env)
+ */
+export interface InjectOptions {
+    /** Path to template file */
+    templateFile: string;
+    /** Custom output path for .env file */
+    output?: string;
+    /** Preview mode - don't make changes */
+    dryRun: boolean;
+    /** Skip confirmation prompts */
+    force: boolean;
 }
 
 /**

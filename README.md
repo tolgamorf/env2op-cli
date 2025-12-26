@@ -1,6 +1,6 @@
 # env2op
 
-Convert `.env` files to 1Password Secure Notes and generate template files for `op inject` and `op run`.
+Push `.env` files to 1Password and pull them back with two simple commands.
 
 ![env2op demo](demo/env2op-demo.gif)
 
@@ -22,7 +22,18 @@ bunx @tolgamorf/env2op-cli .env Personal "MyApp"
 - [1Password CLI](https://1password.com/downloads/command-line/) installed and signed in
 - [Bun](https://bun.sh) runtime (for best performance)
 
-## Usage
+## Commands
+
+This package provides two commands:
+
+| Command | Description |
+|---------|-------------|
+| `env2op` | Push `.env` to 1Password, generate `.env.tpl` template |
+| `op2env` | Pull secrets from 1Password using `.env.tpl` template |
+
+## env2op (Push)
+
+Push environment variables to 1Password and generate a template file.
 
 ```bash
 env2op <env_file> <vault> <item_name> [options]
@@ -34,6 +45,9 @@ env2op <env_file> <vault> <item_name> [options]
 # Basic usage - creates a Secure Note and generates .env.tpl
 env2op .env.production Personal "MyApp - Production"
 
+# Custom output path for template
+env2op .env Personal "MyApp" -o secrets.tpl
+
 # Preview what would happen without making changes
 env2op .env.production Personal "MyApp" --dry-run
 
@@ -41,38 +55,62 @@ env2op .env.production Personal "MyApp" --dry-run
 env2op .env.production Personal "MyApp" --secret
 
 # Skip confirmation prompts (useful for scripts/CI)
-env2op .env.production Personal "MyApp" -y
+env2op .env.production Personal "MyApp" -f
 ```
 
 ### Options
 
 | Flag | Description |
 |------|-------------|
+| `-o, --output` | Output template path (default: `<env_file>.tpl`) |
+| `-f, --force` | Skip confirmation prompts |
 | `--dry-run` | Preview actions without executing |
 | `--secret` | Store all fields as 'password' type (default: 'text') |
-| `-y, --yes` | Skip confirmation prompts (auto-accept) |
 | `-h, --help` | Show help |
 | `-v, --version` | Show version |
 
-### Overwriting Existing Items
+## op2env (Pull)
 
-If an item with the same name already exists in the vault, env2op will prompt for confirmation before overwriting. Use `-y` or `--yes` to skip the prompt and auto-accept.
+Pull secrets from 1Password to generate a `.env` file.
+
+```bash
+op2env <template_file> [options]
+```
+
+### Examples
+
+```bash
+# Basic usage - generates .env from .env.tpl
+op2env .env.tpl
+
+# Custom output path
+op2env .env.tpl -o .env.local
+
+# Preview without making changes
+op2env .env.tpl --dry-run
+
+# Overwrite existing .env without prompting
+op2env .env.tpl -f
+```
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `-o, --output` | Output .env path (default: template without `.tpl`) |
+| `-f, --force` | Overwrite without prompting |
+| `--dry-run` | Preview actions without executing |
+| `-h, --help` | Show help |
+| `-v, --version` | Show version |
 
 ## How It Works
 
-1. **Parses** your `.env` file to extract environment variables
-2. **Creates** a 1Password Secure Note with all variables as fields
-3. **Generates** a `.tpl` template file with `op://` references
+1. **env2op** parses your `.env` file, creates a 1Password Secure Note, and generates a `.tpl` template
+2. **op2env** reads the template and pulls current values from 1Password to create a `.env` file
 
-## Using the Generated Template
-
-After running env2op, you'll have a `.env.tpl` file with 1Password references:
+You can also use the `op run` command to run processes with secrets injected:
 
 ```bash
-# Inject secrets into a new .env file
-op inject -i .env.tpl -o .env
-
-# Run a command with secrets injected
 op run --env-file .env.tpl -- npm start
 ```
 

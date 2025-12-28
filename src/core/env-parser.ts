@@ -2,6 +2,44 @@ import { existsSync, readFileSync } from "node:fs";
 import { errors } from "../utils/errors";
 import type { EnvLine, EnvVariable, ParseResult } from "./types";
 
+const HEADER_SEPARATOR = "# ===========================================================================";
+
+/**
+ * Strip env2op/op2env header blocks from content
+ * Headers are delimited by separator lines
+ */
+export function stripHeaders(content: string): string {
+    const lines = content.split("\n");
+    const result: string[] = [];
+    let inHeader = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (trimmed === HEADER_SEPARATOR) {
+            if (!inHeader) {
+                // Starting a header block
+                inHeader = true;
+            } else {
+                // Ending a header block
+                inHeader = false;
+            }
+            continue;
+        }
+
+        if (!inHeader) {
+            result.push(line);
+        }
+    }
+
+    // Remove leading empty lines left after stripping header
+    while (result.length > 0 && result[0]?.trim() === "") {
+        result.shift();
+    }
+
+    return result.join("\n");
+}
+
 /**
  * Parse a value from an environment variable line
  * Handles quoted strings and inline comments
@@ -43,7 +81,8 @@ export function parseEnvFile(filePath: string): ParseResult {
         throw errors.envFileNotFound(filePath);
     }
 
-    const content = readFileSync(filePath, "utf-8");
+    const rawContent = readFileSync(filePath, "utf-8");
+    const content = stripHeaders(rawContent);
     const rawLines = content.split("\n");
     const variables: EnvVariable[] = [];
     const lines: EnvLine[] = [];

@@ -38,16 +38,30 @@ end
 `;
 }
 
-async function fetchSha256(version: string): Promise<string> {
+async function fetchSha256(version: string, maxRetries = 5): Promise<string> {
     const url = `https://registry.npmjs.org/@tolgamorf/env2op-cli/-/env2op-cli-${version}.tgz`;
-    const response = await fetch(url);
-    if (!response.ok) {
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const response = await fetch(url);
+
+        if (response.ok) {
+            const buffer = await response.arrayBuffer();
+            const hash = new Bun.CryptoHasher("sha256");
+            hash.update(new Uint8Array(buffer));
+            return hash.digest("hex");
+        }
+
+        if (response.status === 404 && attempt < maxRetries) {
+            const waitTime = attempt * 5000; // 5s, 10s, 15s, 20s, 25s
+            console.log(`  Package not yet available, retrying in ${waitTime / 1000}s... (${attempt}/${maxRetries})`);
+            await Bun.sleep(waitTime);
+            continue;
+        }
+
         throw new Error(`Failed to fetch tarball: ${response.status}`);
     }
-    const buffer = await response.arrayBuffer();
-    const hash = new Bun.CryptoHasher("sha256");
-    hash.update(new Uint8Array(buffer));
-    return hash.digest("hex");
+
+    throw new Error("Failed to fetch tarball after max retries");
 }
 
 async function updateHomebrewTap(version: string, sha256: string): Promise<void> {
@@ -309,8 +323,6 @@ async function release() {
 
     // Update Homebrew tap
     console.log("Updating Homebrew tap...");
-    // Wait for npm to propagate
-    await Bun.sleep(5000);
     const sha256 = await fetchSha256(newVersion);
     await updateHomebrewTap(newVersion, sha256);
     console.log("Homebrew tap updated");

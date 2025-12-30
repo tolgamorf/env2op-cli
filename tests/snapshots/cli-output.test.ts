@@ -1,8 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, setSystemTime, test } from "bun:test";
 import { generateTemplateContent, generateUsageInstructions } from "../../src/core/template-generator";
 import type { TemplateOptions } from "../../src/core/types";
 
 describe("CLI output snapshots", () => {
+    beforeAll(() => {
+        setSystemTime(new Date("2025-01-01T00:00:00.000Z"));
+    });
+
+    afterAll(() => {
+        setSystemTime();
+    });
     describe("template content", () => {
         test("generated template matches snapshot", () => {
             const options: TemplateOptions = {

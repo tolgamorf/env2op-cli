@@ -2,6 +2,71 @@
 
 import { $ } from "bun";
 
+const HOMEBREW_TAP_PATH = "./homebrew-tap";
+
+function generateFormula(version: string, sha256: string, versioned: boolean): string {
+    const className = versioned ? `Env2opCliAT${version.replace(/\./g, "_")}` : "Env2opCli";
+
+    return `class ${className} < Formula
+  desc "Push .env files to 1Password and pull them back"
+  homepage "https://github.com/tolgamorf/env2op-cli"
+  url "https://registry.npmjs.org/@tolgamorf/env2op-cli/-/env2op-cli-${version}.tgz"
+  sha256 "${sha256}"
+  license "MIT"
+
+  depends_on "node"
+
+  def install
+    system "npm", "install", *std_npm_args
+    bin.install_symlink Dir["#{libexec}/bin/*"]
+  end
+
+  def caveats
+    <<~EOS
+      env2op-cli requires the 1Password CLI.
+
+      Install it with:
+        brew install 1password-cli
+    EOS
+  end
+
+  test do
+    assert_match "Push .env files to 1Password", shell_output("#{bin}/env2op --help")
+    assert_match "Pull secrets from 1Password", shell_output("#{bin}/op2env --help")
+  end
+end
+`;
+}
+
+async function fetchSha256(version: string): Promise<string> {
+    const url = `https://registry.npmjs.org/@tolgamorf/env2op-cli/-/env2op-cli-${version}.tgz`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch tarball: ${response.status}`);
+    }
+    const buffer = await response.arrayBuffer();
+    const hash = new Bun.CryptoHasher("sha256");
+    hash.update(new Uint8Array(buffer));
+    return hash.digest("hex");
+}
+
+async function updateHomebrewTap(version: string, sha256: string): Promise<void> {
+    const formulaDir = `${HOMEBREW_TAP_PATH}/Formula`;
+
+    // Write main formula (latest)
+    const mainFormula = generateFormula(version, sha256, false);
+    await Bun.write(`${formulaDir}/env2op-cli.rb`, mainFormula);
+
+    // Write versioned formula
+    const versionedFormula = generateFormula(version, sha256, true);
+    await Bun.write(`${formulaDir}/env2op-cli@${version}.rb`, versionedFormula);
+
+    // Commit and push
+    await $`git -C ${HOMEBREW_TAP_PATH} add Formula/`;
+    await $`git -C ${HOMEBREW_TAP_PATH} commit -m ${`v${version}`}`;
+    await $`git -C ${HOMEBREW_TAP_PATH} push`;
+}
+
 async function getLastTag(): Promise<string | null> {
     try {
         const tag = await $`git describe --tags --abbrev=0`.quiet().text();
@@ -100,22 +165,25 @@ async function release() {
     const noteSections: string[] = [];
 
     if (commits.length > 0) {
-        const commitNotes = commits
-            .map((commit) => {
-                let note = `### ${commit.subject}\n`;
-                if (commit.body) {
-                    // Indent body lines for better formatting
-                    const bodyLines = commit.body
-                        .split("\n")
-                        .map((line) => line.trim())
-                        .filter((line) => line.length > 0);
-                    if (bodyLines.length > 0) {
-                        note += `\n${bodyLines.map((line) => `- ${line}`).join("\n")}\n`;
+        const commitNotes =
+            "## What's New\n\n" +
+            commits
+                .map((commit) => {
+                    let note = `### ${commit.subject}\n`;
+                    if (commit.body) {
+                        // Indent body lines for better formatting
+                        const bodyLines = commit.body
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0)
+                            .map((line) => (line.startsWith("-") || line.startsWith("*") ? line : `- ${line}`));
+                        if (bodyLines.length > 0) {
+                            note += `\n${bodyLines.join("\n")}\n`;
+                        }
                     }
-                }
-                return note;
-            })
-            .join("\n");
+                    return note;
+                })
+                .join("\n");
         noteSections.push(commitNotes);
     }
 
@@ -149,6 +217,14 @@ bunx op2env .env.tpl
     }
 
     console.log(`Released ${tag}`);
+
+    // Update Homebrew tap
+    console.log("Updating Homebrew tap...");
+    // Wait for npm to propagate
+    await Bun.sleep(5000);
+    const sha256 = await fetchSha256(newVersion);
+    await updateHomebrewTap(newVersion, sha256);
+    console.log("Homebrew tap updated");
 }
 
 release().catch((err) => {

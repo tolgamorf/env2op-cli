@@ -184,13 +184,18 @@ function buildReleaseNotes(commits: Commit[]): string {
 
     const installInstructions = `## Installation
 
-\`\`\`bash
-# Install globally
-bun install -g env2op
+### Homebrew (macOS/Linux)
 
-# Or run directly with bunx
-bunx env2op .env <vault> "<item_name>"
-bunx op2env .env.tpl
+\`\`\`bash
+brew install tolgamorf/tap/env2op-cli
+\`\`\`
+
+### npm / bun
+
+\`\`\`bash
+bun add -g @tolgamorf/env2op-cli
+# or
+npm install -g @tolgamorf/env2op-cli
 \`\`\``;
     noteSections.push(installInstructions);
 

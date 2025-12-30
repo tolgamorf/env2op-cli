@@ -9,6 +9,13 @@ Push `.env` files to 1Password and pull them back with two simple commands.
 ### Homebrew (macOS/Linux)
 
 ```bash
+brew tap tolgamorf/tap
+brew install env2op-cli
+```
+
+Or in a single command:
+
+```bash
 brew install tolgamorf/tap/env2op-cli
 ```
 
@@ -34,10 +41,10 @@ bunx @tolgamorf/env2op-cli .env Personal "MyApp"
 
 This package provides two commands:
 
-| Command | Description |
-|---------|-------------|
+| Command  | Description                                            |
+|----------|--------------------------------------------------------|
 | `env2op` | Push `.env` to 1Password, generate `.env.tpl` template |
-| `op2env` | Pull secrets from 1Password using `.env.tpl` template |
+| `op2env` | Pull secrets from 1Password using `.env.tpl` template  |
 
 ## env2op (Push)
 
@@ -47,7 +54,7 @@ Push environment variables to 1Password and generate a template file.
 env2op <env_file> <vault> <item_name> [options]
 ```
 
-### Examples
+### Examples for env2op
 
 ```bash
 # Basic usage - creates a Secure Note and generates .env.tpl
@@ -66,16 +73,16 @@ env2op .env.production Personal "MyApp" --secret
 env2op .env.production Personal "MyApp" -f
 ```
 
-### Options
+### Options for env2op
 
-| Flag | Description |
-|------|-------------|
-| `-o, --output` | Output template path (default: `<env_file>.tpl`) |
-| `-f, --force` | Skip confirmation prompts |
-| `--dry-run` | Preview actions without executing |
-| `--secret` | Store all fields as 'password' type (default: 'text') |
-| `-h, --help` | Show help |
-| `-v, --version` | Show version |
+| Flag            | Description                                           |
+|-----------------|-------------------------------------------------------|
+| `-o, --output`  | Output template path (default: `<env_file>.tpl`)      |
+| `-f, --force`   | Skip confirmation prompts                             |
+| `--dry-run`     | Preview actions without executing                     |
+| `--secret`      | Store all fields as 'password' type (default: 'text') |
+| `-h, --help`    | Show help                                             |
+| `-v, --version` | Show version                                          |
 
 ## op2env (Pull)
 
@@ -85,7 +92,7 @@ Pull secrets from 1Password to generate a `.env` file.
 op2env <template_file> [options]
 ```
 
-### Examples
+### Examples for op2env
 
 ```bash
 # Basic usage - generates .env from .env.tpl
@@ -101,15 +108,15 @@ op2env .env.tpl --dry-run
 op2env .env.tpl -f
 ```
 
-### Options
+### Options for op2env
 
-| Flag | Description |
-|------|-------------|
-| `-o, --output` | Output .env path (default: template without `.tpl`) |
-| `-f, --force` | Overwrite without prompting |
-| `--dry-run` | Preview actions without executing |
-| `-h, --help` | Show help |
-| `-v, --version` | Show version |
+| Flag            | Description                                         |
+|-----------------|-----------------------------------------------------|
+| `-o, --output`  | Output .env path (default: template without `.tpl`) |
+| `-f, --force`   | Overwrite without prompting                         |
+| `--dry-run`     | Preview actions without executing                   |
+| `-h, --help`    | Show help                                           |
+| `-v, --version` | Show version                                        |
 
 ## How It Works
 
@@ -143,6 +150,7 @@ env2op .env Personal "MyApp Secrets"
 ```
 
 Creates a 1Password Secure Note with fields:
+
 - `DATABASE_URL` (text)
 - `API_KEY` (text)
 - `DEBUG` (text)

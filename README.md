@@ -6,7 +6,7 @@ Push `.env` files to 1Password and pull them back with two simple commands.
 
 ## Installation
 
-### Homebrew (macOS)
+### Homebrew (macOS/Linux)
 
 ```bash
 brew install tolgamorf/tap/env2op-cli

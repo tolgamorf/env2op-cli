@@ -105,7 +105,101 @@ async function getCommitsSinceTag(tag: string | null): Promise<Commit[]> {
     }
 }
 
+type BumpType = "patch" | "minor" | "major";
+
+function bumpVersion(currentVersion: string, bumpType: BumpType): string {
+    const parts = currentVersion.split(".").map(Number);
+    switch (bumpType) {
+        case "major":
+            parts[0]++;
+            parts[1] = 0;
+            parts[2] = 0;
+            break;
+        case "minor":
+            parts[1]++;
+            parts[2] = 0;
+            break;
+        case "patch":
+            parts[2]++;
+            break;
+    }
+    return parts.join(".");
+}
+
+function isValidVersion(version: string): boolean {
+    return /^\d+\.\d+\.\d+$/.test(version);
+}
+
+function parseVersionArg(arg: string | undefined, currentVersion: string): string {
+    if (!arg || arg === "patch") {
+        return bumpVersion(currentVersion, "patch");
+    }
+    if (arg === "minor") {
+        return bumpVersion(currentVersion, "minor");
+    }
+    if (arg === "major") {
+        return bumpVersion(currentVersion, "major");
+    }
+    if (isValidVersion(arg)) {
+        return arg;
+    }
+    console.log(`Invalid version: ${arg}`);
+    console.log("Usage: bun run release [patch|minor|major|x.y.z]");
+    process.exit(1);
+}
+
+async function confirm(message: string): Promise<boolean> {
+    process.stdout.write(`${message} [y/N] `);
+    for await (const line of console) {
+        const answer = line.trim().toLowerCase();
+        return answer === "y" || answer === "yes";
+    }
+    return false;
+}
+
+function buildReleaseNotes(commits: Commit[]): string {
+    const noteSections: string[] = [];
+
+    if (commits.length > 0) {
+        const commitNotes =
+            "## What's New\n\n" +
+            commits
+                .map((commit) => {
+                    let note = `### ${commit.subject}\n`;
+                    if (commit.body) {
+                        const bodyLines = commit.body
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0)
+                            .map((line) => (line.startsWith("-") || line.startsWith("*") ? line : `- ${line}`));
+                        if (bodyLines.length > 0) {
+                            note += `\n${bodyLines.join("\n")}\n`;
+                        }
+                    }
+                    return note;
+                })
+                .join("\n");
+        noteSections.push(commitNotes);
+    }
+
+    const installInstructions = `## Installation
+
+\`\`\`bash
+# Install globally
+bun install -g env2op
+
+# Or run directly with bunx
+bunx env2op .env <vault> "<item_name>"
+bunx op2env .env.tpl
+\`\`\``;
+    noteSections.push(installInstructions);
+
+    return noteSections.join("\n---\n\n");
+}
+
 async function release() {
+    const versionArg = process.argv[2];
+
     // Check for unstaged changes
     const status = await $`git status --porcelain`.text();
     if (status.trim()) {
@@ -122,31 +216,62 @@ async function release() {
         console.log("Checks failed. Fix errors before releasing.");
         process.exit(0);
     }
+    console.log("Checks passed.\n");
 
-    // Read current version
+    // Read current version and determine new version
     const pkg = await Bun.file("package.json").json();
     const currentVersion: string = pkg.version;
-
-    // Increment patch version
-    const parts = currentVersion.split(".").map(Number);
-    parts[2]++;
-    const newVersion = parts.join(".");
-
+    const newVersion = parseVersionArg(versionArg, currentVersion);
     const tag = `v${newVersion}`;
     const lastTag = await getLastTag();
 
-    // Show commits since last release
+    // Get commits and build release notes
     const commits = await getCommitsSinceTag(lastTag);
+    const releaseNotes = buildReleaseNotes(commits);
+
+    // Show release summary
+    console.log("═".repeat(60));
+    console.log("                     RELEASE SUMMARY");
+    console.log("═".repeat(60));
+    console.log("");
+    console.log(`  Version:  ${currentVersion} → ${newVersion}`);
+    console.log(`  Tag:      ${tag}`);
+    console.log("");
+
     if (commits.length > 0) {
-        console.log("");
-        console.log(`Changes since ${lastTag ?? "initial commit"}:`);
-        console.log("─".repeat(50));
+        console.log("─".repeat(60));
+        console.log("  Changes:");
+        console.log("─".repeat(60));
         for (const commit of commits) {
-            console.log(`  • ${commit.subject}`);
+            console.log(`    • ${commit.subject}`);
         }
-        console.log("─".repeat(50));
+        console.log("");
+    } else {
+        console.log("  No commits since last release.");
         console.log("");
     }
+
+    console.log("─".repeat(60));
+    console.log("  Release Notes Preview:");
+    console.log("─".repeat(60));
+    console.log(
+        releaseNotes
+            .split("\n")
+            .map((line) => `    ${line}`)
+            .join("\n"),
+    );
+    console.log("");
+    console.log("═".repeat(60));
+    console.log("");
+
+    // Confirm release
+    const confirmed = await confirm("Proceed with release?");
+    if (!confirmed) {
+        console.log("Release cancelled.");
+        process.exit(0);
+    }
+
+    console.log("");
 
     // Update package.json
     pkg.version = newVersion;
@@ -160,47 +285,6 @@ async function release() {
         await $`git checkout package.json`.quiet();
         process.exit(0);
     }
-
-    // Build release notes
-    const noteSections: string[] = [];
-
-    if (commits.length > 0) {
-        const commitNotes =
-            "## What's New\n\n" +
-            commits
-                .map((commit) => {
-                    let note = `### ${commit.subject}\n`;
-                    if (commit.body) {
-                        // Indent body lines for better formatting
-                        const bodyLines = commit.body
-                            .split("\n")
-                            .map((line) => line.trim())
-                            .filter((line) => line.length > 0)
-                            .map((line) => (line.startsWith("-") || line.startsWith("*") ? line : `- ${line}`));
-                        if (bodyLines.length > 0) {
-                            note += `\n${bodyLines.join("\n")}\n`;
-                        }
-                    }
-                    return note;
-                })
-                .join("\n");
-        noteSections.push(commitNotes);
-    }
-
-    // Add installation instructions
-    const installInstructions = `## Installation
-
-\`\`\`bash
-# Install globally
-bun install -g env2op
-
-# Or run directly with bunx
-bunx env2op .env <vault> "<item_name>"
-bunx op2env .env.tpl
-\`\`\``;
-    noteSections.push(installInstructions);
-
-    const releaseNotes = noteSections.join("\n---\n\n");
 
     console.log(`Releasing ${tag}...`);
 

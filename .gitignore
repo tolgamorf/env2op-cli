@@ -198,4 +198,4 @@ cmake/sources/*.txt
 !.env*.example
 
 # Homebrew tap (separate repo)
-homebrew-tap/
+homebrew-tap

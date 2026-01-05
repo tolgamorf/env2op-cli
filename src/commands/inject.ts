@@ -1,13 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import * as p from "@clack/prompts";
-import { $ } from "bun";
 import { stripHeaders } from "../core/env-parser";
 import { checkOpCli, checkSignedIn } from "../core/onepassword";
 import { generateEnvHeader } from "../core/template-generator";
 import type { InjectOptions } from "../core/types";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { exec } from "../utils/shell";
 
 /**
  * Derive output path from template path
@@ -95,10 +95,10 @@ export async function runInject(options: InjectOptions): Promise<void> {
         spinner.start("Injecting secrets from 1Password...");
 
         try {
-            const result = await $`op inject -i ${templateFile} -o ${outputPath} -f`.quiet();
+            const result = await exec("op", ["inject", "-i", templateFile, "-o", outputPath, "-f"]);
 
             if (result.exitCode !== 0) {
-                throw new Error(result.stderr.toString());
+                throw new Error(result.stderr);
             }
 
             // Strip any existing headers and prepend fresh .env header
@@ -110,8 +110,8 @@ export async function runInject(options: InjectOptions): Promise<void> {
             spinner.stop(`Generated: ${outputPath}`);
         } catch (error) {
             spinner.stop("Failed to inject secrets");
-            // Extract stderr from Bun shell error
-            const stderr = (error as { stderr?: Buffer })?.stderr?.toString?.();
+            // Extract stderr from error
+            const stderr = (error as { stderr?: string })?.stderr;
             const message = stderr || (error instanceof Error ? error.message : String(error));
             throw new Env2OpError("Failed to inject secrets from 1Password", "INJECT_FAILED", message);
         }

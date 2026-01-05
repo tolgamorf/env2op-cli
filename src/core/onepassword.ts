@@ -1,41 +1,26 @@
-import { $ } from "bun";
 import { errors } from "../utils/errors";
+import { exec, execJson, execQuiet } from "../utils/shell";
 import type { CreateItemOptions, CreateItemResult } from "./types";
 
 /**
  * Check if the 1Password CLI is installed
  */
 export async function checkOpCli(): Promise<boolean> {
-    try {
-        await $`op --version`.quiet();
-        return true;
-    } catch {
-        return false;
-    }
+    return execQuiet("op", ["--version"]);
 }
 
 /**
  * Check if user is signed in to 1Password CLI
  */
 export async function checkSignedIn(): Promise<boolean> {
-    try {
-        await $`op account get`.quiet();
-        return true;
-    } catch {
-        return false;
-    }
+    return execQuiet("op", ["account", "get"]);
 }
 
 /**
  * Check if an item exists in a vault
  */
 export async function itemExists(vault: string, title: string): Promise<boolean> {
-    try {
-        await $`op item get ${title} --vault ${vault}`.quiet();
-        return true;
-    } catch {
-        return false;
-    }
+    return execQuiet("op", ["item", "get", title, "--vault", vault]);
 }
 
 /**
@@ -43,10 +28,17 @@ export async function itemExists(vault: string, title: string): Promise<boolean>
  */
 export async function deleteItem(vault: string, title: string): Promise<void> {
     try {
-        await $`op item delete ${title} --vault ${vault}`.quiet();
+        await exec("op", ["item", "delete", title, "--vault", vault]);
     } catch (_error) {
         // Item might not exist, that's fine
     }
+}
+
+interface OpCreateResult {
+    id: string;
+    title: string;
+    vault?: { name: string; id: string };
+    fields?: Array<{ label: string; id: string }>;
 }
 
 /**
@@ -74,7 +66,7 @@ export async function createSecureNote(options: CreateItemOptions): Promise<Crea
         ];
 
         // Execute op command
-        const result = await $`op ${args}`.json();
+        const result = await execJson<OpCreateResult>("op", args);
 
         // Extract field IDs mapped by label
         const fieldIds: Record<string, string> = {};
@@ -103,12 +95,7 @@ export async function createSecureNote(options: CreateItemOptions): Promise<Crea
  * Check if a vault exists
  */
 export async function vaultExists(vault: string): Promise<boolean> {
-    try {
-        await $`op vault get ${vault}`.quiet();
-        return true;
-    } catch {
-        return false;
-    }
+    return execQuiet("op", ["vault", "get", vault]);
 }
 
 /**
@@ -116,7 +103,7 @@ export async function vaultExists(vault: string): Promise<boolean> {
  */
 export async function createVault(name: string): Promise<void> {
     try {
-        await $`op vault create ${name}`.quiet();
+        await exec("op", ["vault", "create", name]);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw errors.vaultCreateFailed(message);

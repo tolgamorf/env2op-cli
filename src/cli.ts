@@ -1,5 +1,3 @@
-#!/usr/bin/env bun
-
 import pc from "picocolors";
 import { runConvert } from "./commands/convert";
 

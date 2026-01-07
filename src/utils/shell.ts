@@ -53,11 +53,22 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
     // Use temp file to capture stdout (piping causes hanging)
     const tempFile = join(tmpdir(), `env2op-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
 
-    // Check if we need to capture stdout (for JSON parsing)
-    const needsCapture = args.includes("--format") && args.includes("json");
+    // Check if command has field arguments (like KEY[type]=value) - these hang with redirects
+    const hasFieldArgs = args.some((arg) => /\[.+\]=/.test(arg));
 
-    if (needsCapture) {
-        // Redirect stdout to temp file for JSON commands
+    if (hasFieldArgs) {
+        // Commands with field args (create/edit) - must use stdio inherit to avoid hanging
+        const result = spawnSync("bash", ["-c", fullCommand], {
+            stdio: "inherit",
+        });
+
+        return {
+            stdout: "",
+            stderr: "",
+            exitCode: result.status ?? 0,
+        };
+    } else {
+        // Simple commands - redirect stdout to temp file
         const cmdWithRedirect = `${fullCommand} > '${tempFile}'`;
 
         const result = spawnSync("bash", ["-c", cmdWithRedirect], {
@@ -83,17 +94,6 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
 
         return {
             stdout,
-            stderr: "",
-            exitCode: result.status ?? 0,
-        };
-    } else {
-        // No capture needed - just run with full stdio inherit
-        const result = spawnSync("bash", ["-c", fullCommand], {
-            stdio: "inherit",
-        });
-
-        return {
-            stdout: "",
             stderr: "",
             exitCode: result.status ?? 0,
         };

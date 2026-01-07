@@ -182,16 +182,10 @@ function buildReleaseNotes(commits: Commit[]): string {
                     let note = `### ${commit.subject}\n`;
                     if (commit.body) {
                         const bodyLines = commit.body
-                            .split(/\n\n+/) // Split on paragraph breaks
-                            .map((para) =>
-                                para
-                                    .split("\n")
-                                    .map((line) => line.trim())
-                                    .filter((line) => line.length > 0)
-                                    .join(" "),
-                            )
-                            .filter((para) => para.length > 0)
-                            .map((para) => (para.startsWith("-") || para.startsWith("*") ? para : `- ${para}`));
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter((line) => line.length > 0)
+                            .map((line) => (line.startsWith("-") || line.startsWith("*") ? line : `- ${line}`));
                         if (bodyLines.length > 0) {
                             note += `\n${bodyLines.join("\n")}\n`;
                         }

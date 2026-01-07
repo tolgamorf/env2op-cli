@@ -199,3 +199,6 @@ cmake/sources/*.txt
 
 # Homebrew tap (separate repo)
 homebrew-tap
+
+# Test scripts
+.test

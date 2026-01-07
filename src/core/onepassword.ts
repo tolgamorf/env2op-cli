@@ -132,24 +132,43 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
 /**
  * Edit an existing Secure Note in 1Password - updates fields in place
  * This preserves the item UUID and doesn't add to trash
+ * Fields that exist in the item but not in the new fields will be deleted
  */
 export async function editSecureNote(options: CreateItemOptions & VerboseOption): Promise<CreateItemResult> {
     const { vault, title, fields, secret, verbose } = options;
 
-    // Build field arguments for edit
-    const fieldType = secret ? "password" : "text";
-    const fieldArgs = fields.map(({ key, value }) => `${key}[${fieldType}]=${value}`);
-
     try {
-        // Step 1: Edit the item (no --format=json, op CLI hangs with it when piped)
-        const editArgs = ["item", "edit", title, "--vault", vault, ...fieldArgs];
+        // Step 1: Get current item to find fields that need to be deleted
+        const currentItem = await execJson<OpItemResult>("op", ["item", "get", title, "--vault", vault, "--format", "json"], { verbose });
+
+        // Get existing field labels (excluding built-in fields like "notesPlain")
+        const existingLabels = new Set(
+            (currentItem.fields ?? [])
+                .filter((f) => f.label && f.id && !f.id.startsWith("notesPlain"))
+                .map((f) => f.label),
+        );
+
+        // Get new field keys
+        const newKeys = new Set(fields.map((f) => f.key));
+
+        // Fields to delete: exist in item but not in new fields
+        const deleteArgs = [...existingLabels]
+            .filter((label) => !newKeys.has(label))
+            .map((label) => `${label}[delete]`);
+
+        // Build field arguments for update/add
+        const fieldType = secret ? "password" : "text";
+        const fieldArgs = fields.map(({ key, value }) => `${key}[${fieldType}]=${value}`);
+
+        // Step 2: Edit the item - delete first, then update/add
+        const editArgs = ["item", "edit", title, "--vault", vault, ...deleteArgs, ...fieldArgs];
 
         const editResult = await exec("op", editArgs, { verbose });
         if (editResult.exitCode !== 0) {
             throw new Error(editResult.stderr || "Failed to edit item");
         }
 
-        // Step 2: Get the updated item info
+        // Step 3: Get the updated item info
         const getResult = await execJson<OpItemResult>("op", ["item", "get", title, "--vault", vault, "--format", "json"], { verbose });
 
         // Extract field IDs mapped by label

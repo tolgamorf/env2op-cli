@@ -2,6 +2,7 @@ import { errors } from "../utils/errors";
 import { exec, execJson } from "../utils/shell";
 import type { CreateItemOptions, CreateItemResult } from "./types";
 
+
 interface VerboseOption {
     verbose?: boolean;
 }
@@ -76,12 +77,12 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
     const fieldArgs = fields.map(({ key, value }) => `${key}[${fieldType}]=${value}`);
 
     try {
-        // Step 1: Create the item (without capturing output - avoids hanging)
+        // Step 1: Create the item (no --format=json, op CLI hangs with it when piped)
         const createArgs = [
             "item",
             "create",
             "--category",
-            "003",
+            "Secure Note",
             "--vault",
             vault,
             "--title",
@@ -132,7 +133,7 @@ export async function editSecureNote(options: CreateItemOptions & VerboseOption)
     const fieldArgs = fields.map(({ key, value }) => `${key}[${fieldType}]=${value}`);
 
     try {
-        // Step 1: Edit the item (without capturing output - avoids hanging)
+        // Step 1: Edit the item (no --format=json, op CLI hangs with it when piped)
         const editArgs = ["item", "edit", title, "--vault", vault, ...fieldArgs];
 
         const editResult = await exec("op", editArgs, { verbose });

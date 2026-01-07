@@ -1,6 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
-import { setTimeout } from "node:timers/promises";
 import * as p from "@clack/prompts";
 import { stripHeaders } from "../core/env-parser";
 import { checkOpCli, checkSignedIn, signIn } from "../core/onepassword";
@@ -9,13 +8,7 @@ import type { InjectOptions } from "../core/types";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { exec } from "../utils/shell";
-
-const MIN_SPINNER_TIME = 500;
-
-async function withMinTime<T>(promise: Promise<T>, minTime = MIN_SPINNER_TIME): Promise<T> {
-    const [result] = await Promise.all([promise, setTimeout(minTime)]);
-    return result;
-}
+import { withMinTime } from "../utils/timing";
 
 /**
  * Derive output path from template path

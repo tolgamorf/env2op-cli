@@ -1,18 +1,6 @@
 import { basename, dirname, join } from "node:path";
-import { setTimeout } from "node:timers/promises";
 import * as p from "@clack/prompts";
 import { parseEnvFile, validateParseResult } from "../core/env-parser";
-
-const MIN_SPINNER_TIME = 500; // Minimum time to show spinner state (ms)
-
-/**
- * Run an async operation with minimum display time for the spinner
- */
-async function withMinTime<T>(promise: Promise<T>, minTime = MIN_SPINNER_TIME): Promise<T> {
-    const [result] = await Promise.all([promise, setTimeout(minTime)]);
-    return result;
-}
-
 import {
     checkOpCli,
     checkSignedIn,
@@ -27,6 +15,7 @@ import { generateTemplateContent, generateUsageInstructions, writeTemplate } fro
 import type { ConvertOptions, CreateItemResult } from "../core/types";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { withMinTime } from "../utils/timing";
 
 /**
  * Execute the convert operation
@@ -40,7 +29,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 
     try {
         // Step 1: Parse .env file
-        const parseResult = parseEnvFile(envFile);
+        const parseResult = await parseEnvFile(envFile);
         validateParseResult(parseResult, envFile);
 
         const { variables, lines } = parseResult;
@@ -202,7 +191,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                         : `Created "${itemResult.title}" in vault "${itemResult.vault}"`,
                 );
             } catch (error) {
-                pushSpinner.stop(existingItemId ? "Failed to update Secure Note" : "Failed to create Secure Note");
+                pushSpinner.stop();
                 throw error;
             }
         }

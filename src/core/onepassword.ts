@@ -194,6 +194,6 @@ export async function editSecureNote(options: EditItemOptions & VerboseOption): 
         };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        throw errors.itemCreateFailed(message);
+        throw errors.itemEditFailed(message);
     }
 }

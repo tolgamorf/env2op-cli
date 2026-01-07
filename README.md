@@ -1,4 +1,4 @@
-# env2op
+# env2op & op2env
 
 Push `.env` files to 1Password and pull them back with two simple commands.
 
@@ -19,7 +19,9 @@ Or in a single command:
 brew install tolgamorf/tap/env2op-cli
 ```
 
-### npm / bun
+### Package Managers (All Operating Systems)
+
+#### Global installation
 
 ```bash
 # Using bun
@@ -28,9 +30,23 @@ bun add -g @tolgamorf/env2op-cli
 # Using npm
 npm install -g @tolgamorf/env2op-cli
 
-# Or run directly with bunx/npx
-bunx @tolgamorf/env2op-cli .env Personal "MyApp"
+# Using pnpm
+pnpm add -g @tolgamorf/env2op-cli
 ```
+
+#### Running directly
+
+```bash
+# Using bun
+bunx @tolgamorf/env2op-cli .env Personal "MyApp"
+
+# Using npm
+npx @tolgamorf/env2op-cli .env Personal "MyApp"
+
+# Using pnpm
+pnpm dlx @tolgamorf/env2op-cli .env Personal "MyApp"
+```
+
 
 ## Prerequisites
 

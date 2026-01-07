@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { errors } from "../utils/errors";
 import type { EnvLine, EnvVariable, ParseResult } from "./types";
 
@@ -70,19 +70,32 @@ function parseValue(raw: string): string {
 }
 
 /**
+ * Strip UTF-8 BOM (Byte Order Mark) from content if present
+ * Common on Windows-created files
+ */
+function stripBom(content: string): string {
+    if (content.charCodeAt(0) === 0xfeff) {
+        return content.slice(1);
+    }
+    return content;
+}
+
+/**
  * Parse an .env file and extract environment variables
  *
  * @param filePath - Path to the .env file
  * @returns ParseResult containing variables and any errors
  * @throws Env2OpError if file not found
  */
-export function parseEnvFile(filePath: string): ParseResult {
-    if (!existsSync(filePath)) {
+export async function parseEnvFile(filePath: string): Promise<ParseResult> {
+    let rawContent: string;
+    try {
+        rawContent = await readFile(filePath, "utf-8");
+    } catch {
         throw errors.envFileNotFound(filePath);
     }
 
-    const rawContent = readFileSync(filePath, "utf-8");
-    const content = stripHeaders(rawContent);
+    const content = stripHeaders(stripBom(rawContent));
     const rawLines = content.split("\n");
     const variables: EnvVariable[] = [];
     const lines: EnvLine[] = [];

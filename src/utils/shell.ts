@@ -34,20 +34,20 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
             stdio: ["ignore", "pipe", "pipe"],
         });
 
-        let stdout = "";
-        let stderr = "";
+        const stdoutChunks: string[] = [];
+        const stderrChunks: string[] = [];
 
-        proc.stdout?.on("data", (data: Buffer) => {
-            const text = data.toString();
-            stdout += text;
+        proc.stdout?.on("data", (data: Buffer | string) => {
+            const text = Buffer.isBuffer(data) ? data.toString() : String(data);
+            stdoutChunks.push(text);
             if (verbose) {
                 process.stdout.write(text);
             }
         });
 
-        proc.stderr?.on("data", (data: Buffer) => {
-            const text = data.toString();
-            stderr += text;
+        proc.stderr?.on("data", (data: Buffer | string) => {
+            const text = Buffer.isBuffer(data) ? data.toString() : String(data);
+            stderrChunks.push(text);
             if (verbose) {
                 process.stderr.write(text);
             }
@@ -55,16 +55,17 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
 
         proc.on("close", (code) => {
             resolve({
-                stdout,
-                stderr,
-                exitCode: code ?? 0,
+                stdout: stdoutChunks.join(""),
+                stderr: stderrChunks.join(""),
+                exitCode: code ?? 1,
             });
         });
 
-        proc.on("error", () => {
+        proc.on("error", (err) => {
+            stderrChunks.push(err.message);
             resolve({
-                stdout,
-                stderr,
+                stdout: stdoutChunks.join(""),
+                stderr: stderrChunks.join(""),
                 exitCode: 1,
             });
         });
@@ -120,38 +121,39 @@ export async function execWithStdin(
             stdio: ["pipe", "pipe", "pipe"],
         });
 
-        let stdout = "";
-        let stderr = "";
+        const stdoutChunks: string[] = [];
+        const stderrChunks: string[] = [];
 
         proc.stdin?.write(stdinContent);
         proc.stdin?.end();
 
-        proc.stdout?.on("data", (data: Buffer) => {
-            const text = data.toString();
-            stdout += text;
+        proc.stdout?.on("data", (data: Buffer | string) => {
+            const text = Buffer.isBuffer(data) ? data.toString() : String(data);
+            stdoutChunks.push(text);
             if (verbose) process.stdout.write(text);
         });
 
-        proc.stderr?.on("data", (data: Buffer) => {
-            const text = data.toString();
-            stderr += text;
+        proc.stderr?.on("data", (data: Buffer | string) => {
+            const text = Buffer.isBuffer(data) ? data.toString() : String(data);
+            stderrChunks.push(text);
             if (verbose) process.stderr.write(text);
         });
 
         proc.on("close", (code) => {
-            resolve({ stdout, stderr, exitCode: code ?? 0 });
+            resolve({
+                stdout: stdoutChunks.join(""),
+                stderr: stderrChunks.join(""),
+                exitCode: code ?? 1,
+            });
         });
 
-        proc.on("error", () => {
-            resolve({ stdout, stderr, exitCode: 1 });
+        proc.on("error", (err) => {
+            stderrChunks.push(err.message);
+            resolve({
+                stdout: stdoutChunks.join(""),
+                stderr: stderrChunks.join(""),
+                exitCode: 1,
+            });
         });
     });
-}
-
-/**
- * Execute a command and parse stdout as JSON
- */
-export async function execJson<T>(command: string, args: string[] = [], options: ExecOptions = {}): Promise<T> {
-    const result = await execOrThrow(command, args, options);
-    return JSON.parse(result.stdout) as T;
 }

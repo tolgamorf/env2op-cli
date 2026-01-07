@@ -25,6 +25,7 @@ export const ErrorCodes = {
     VAULT_CREATE_FAILED: "VAULT_CREATE_FAILED",
     ITEM_EXISTS: "ITEM_EXISTS",
     ITEM_CREATE_FAILED: "ITEM_CREATE_FAILED",
+    ITEM_EDIT_FAILED: "ITEM_EDIT_FAILED",
     PARSE_ERROR: "PARSE_ERROR",
     TEMPLATE_NOT_FOUND: "TEMPLATE_NOT_FOUND",
     INJECT_FAILED: "INJECT_FAILED",
@@ -83,6 +84,9 @@ export const errors = {
 
     itemCreateFailed: (message: string): Env2OpError =>
         new Env2OpError(`Failed to create 1Password item: ${message}`, ErrorCodes.ITEM_CREATE_FAILED),
+
+    itemEditFailed: (message: string): Env2OpError =>
+        new Env2OpError(`Failed to edit 1Password item: ${message}`, ErrorCodes.ITEM_EDIT_FAILED),
 
     parseError: (line: number, message: string): Env2OpError =>
         new Env2OpError(`Parse error at line ${line}: ${message}`, ErrorCodes.PARSE_ERROR),

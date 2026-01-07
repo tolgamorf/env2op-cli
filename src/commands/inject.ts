@@ -26,7 +26,7 @@ function deriveOutputPath(templatePath: string): string {
  * Execute the inject operation (op2env)
  */
 export async function runInject(options: InjectOptions): Promise<void> {
-    const { templateFile, output, dryRun, force } = options;
+    const { templateFile, output, dryRun, force, verbose } = options;
     const outputPath = output ?? deriveOutputPath(templateFile);
 
     // Display intro
@@ -47,7 +47,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
 
         // Step 2: Check 1Password CLI
         if (!dryRun) {
-            const opInstalled = await checkOpCli();
+            const opInstalled = await checkOpCli({ verbose });
             if (!opInstalled) {
                 throw new Env2OpError(
                     "1Password CLI (op) is not installed",
@@ -56,7 +56,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
                 );
             }
 
-            const signedIn = await checkSignedIn();
+            const signedIn = await checkSignedIn({ verbose });
             if (!signedIn) {
                 throw new Env2OpError(
                     "Not signed in to 1Password CLI",
@@ -91,11 +91,12 @@ export async function runInject(options: InjectOptions): Promise<void> {
         }
 
         // Step 4: Run op inject
-        const spinner = logger.spinner();
-        spinner.start("Injecting secrets from 1Password...");
+        // Don't use spinner in verbose mode - it interferes with command output
+        const spinner = verbose ? null : logger.spinner();
+        spinner?.start("Injecting secrets from 1Password...");
 
         try {
-            const result = await exec("op", ["inject", "-i", templateFile, "-o", outputPath, "-f"]);
+            const result = await exec("op", ["inject", "-i", templateFile, "-o", outputPath, "-f"], { verbose });
 
             if (result.exitCode !== 0) {
                 throw new Error(result.stderr);
@@ -107,9 +108,13 @@ export async function runInject(options: InjectOptions): Promise<void> {
             const header = generateEnvHeader(basename(outputPath)).join("\n");
             writeFileSync(outputPath, header + envContent, "utf-8");
 
-            spinner.stop(`Generated: ${outputPath}`);
+            if (spinner) {
+                spinner.stop(`Generated: ${outputPath}`);
+            } else {
+                logger.success(`Generated: ${outputPath}`);
+            }
         } catch (error) {
-            spinner.stop("Failed to inject secrets");
+            spinner?.stop("Failed to inject secrets");
             // Extract stderr from error
             const stderr = (error as { stderr?: string })?.stderr;
             const message = stderr || (error instanceof Error ? error.message : String(error));

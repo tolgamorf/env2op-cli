@@ -6,7 +6,7 @@ import {
     checkSignedIn,
     createSecureNote,
     createVault,
-    deleteItem,
+    editSecureNote,
     itemExists,
     vaultExists,
 } from "../core/onepassword";
@@ -19,7 +19,7 @@ import { logger } from "../utils/logger";
  * Execute the convert operation
  */
 export async function runConvert(options: ConvertOptions): Promise<void> {
-    const { envFile, vault, itemName, output, dryRun, secret, force } = options;
+    const { envFile, vault, itemName, output, dryRun, secret, force, verbose } = options;
 
     // Display intro
     const pkg = await import("../../package.json");
@@ -40,7 +40,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.warn(error);
         }
 
-        // Step 2: Create 1Password Secure Note
+        // Step 2: Create or update 1Password Secure Note
         let itemResult: CreateItemResult | null = null;
 
         if (dryRun) {
@@ -51,7 +51,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.keyValue("Fields", logger.formatFields(variables.map((v) => v.key)));
         } else {
             // Check 1Password CLI before attempting
-            const opInstalled = await checkOpCli();
+            const opInstalled = await checkOpCli({ verbose });
             if (!opInstalled) {
                 throw new Env2OpError(
                     "1Password CLI (op) is not installed",
@@ -60,7 +60,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                 );
             }
 
-            const signedIn = await checkSignedIn();
+            const signedIn = await checkSignedIn({ verbose });
             if (!signedIn) {
                 throw new Env2OpError(
                     "Not signed in to 1Password CLI",
@@ -70,7 +70,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             }
 
             // Check if vault exists
-            const vaultFound = await vaultExists(vault);
+            const vaultFound = await vaultExists(vault, { verbose });
 
             if (vaultFound) {
                 logger.success(`Vault "${vault}" found`);
@@ -78,7 +78,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                 if (force) {
                     // Auto-create vault
                     logger.warn(`Vault "${vault}" not found, creating...`);
-                    await createVault(vault);
+                    await createVault(vault, { verbose });
                     logger.success(`Created vault "${vault}"`);
                 } else {
                     // Ask for confirmation to create vault
@@ -94,49 +94,73 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 
                     const spinner = logger.spinner();
                     spinner.start(`Creating vault "${vault}"...`);
-                    await createVault(vault);
+                    await createVault(vault, { verbose });
                     spinner.stop(`Created vault "${vault}"`);
                 }
             }
 
             // Check if item already exists
-            const exists = await itemExists(vault, itemName);
+            const exists = await itemExists(vault, itemName, { verbose });
 
             if (exists) {
-                if (force) {
-                    // Auto-accept: delete and recreate
-                    logger.warn(`Item "${itemName}" already exists, overwriting...`);
-                    await deleteItem(vault, itemName);
-                } else {
-                    // Ask for confirmation
+                // Item exists - update it in place (preserves UUID, avoids trash)
+                if (!force) {
                     const shouldOverwrite = await p.confirm({
-                        message: `Item "${itemName}" already exists in vault "${vault}". Overwrite?`,
+                        message: `Item "${itemName}" already exists in vault "${vault}". Update it?`,
                     });
 
                     if (p.isCancel(shouldOverwrite) || !shouldOverwrite) {
                         logger.cancel("Operation cancelled");
                         process.exit(0);
                     }
-
-                    await deleteItem(vault, itemName);
                 }
-            }
 
-            const spinner = logger.spinner();
-            spinner.start("Creating 1Password Secure Note...");
+                // Don't use spinner in verbose mode - it interferes with command output
+                const spinner = verbose ? null : logger.spinner();
+                spinner?.start(`Updating "${itemName}"...`);
 
-            try {
-                itemResult = await createSecureNote({
-                    vault,
-                    title: itemName,
-                    fields: variables,
-                    secret,
-                });
+                try {
+                    itemResult = await editSecureNote({
+                        vault,
+                        title: itemName,
+                        fields: variables,
+                        secret,
+                        verbose,
+                    });
 
-                spinner.stop(`Created "${itemResult.title}" in vault "${itemResult.vault}"`);
-            } catch (error) {
-                spinner.stop("Failed to create Secure Note");
-                throw error;
+                    if (spinner) {
+                        spinner.stop(`Updated "${itemResult.title}" in vault "${itemResult.vault}"`);
+                    } else {
+                        logger.success(`Updated "${itemResult.title}" in vault "${itemResult.vault}"`);
+                    }
+                } catch (error) {
+                    spinner?.stop("Failed to update Secure Note");
+                    throw error;
+                }
+            } else {
+                // Item doesn't exist - create new
+                // Don't use spinner in verbose mode - it interferes with command output
+                const spinner = verbose ? null : logger.spinner();
+                spinner?.start("Creating 1Password Secure Note...");
+
+                try {
+                    itemResult = await createSecureNote({
+                        vault,
+                        title: itemName,
+                        fields: variables,
+                        secret,
+                        verbose,
+                    });
+
+                    if (spinner) {
+                        spinner.stop(`Created "${itemResult.title}" in vault "${itemResult.vault}"`);
+                    } else {
+                        logger.success(`Created "${itemResult.title}" in vault "${itemResult.vault}"`);
+                    }
+                } catch (error) {
+                    spinner?.stop("Failed to create Secure Note");
+                    throw error;
+                }
             }
         }
 

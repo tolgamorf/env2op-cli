@@ -50,6 +50,7 @@ await runInject({
     output: options.output,
     dryRun: flags.has("dry-run"),
     force: flags.has("f") || flags.has("force"),
+    verbose: flags.has("verbose"),
 });
 
 function showHelp(): void {
@@ -70,6 +71,7 @@ ${pc.bold("OPTIONS")}
   ${pc.cyan("-o, --output")}   Output .env path (default: template without .tpl)
   ${pc.cyan("-f, --force")}    Overwrite without prompting
   ${pc.cyan("--dry-run")}      Preview actions without executing
+  ${pc.cyan("--verbose")}      Show op CLI output
   ${pc.cyan("-h, --help")}     Show this help message
   ${pc.cyan("-v, --version")}  Show version
 

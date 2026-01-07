@@ -12,7 +12,7 @@ export {
     checkSignedIn,
     createSecureNote,
     createVault,
-    deleteItem,
+    editSecureNote,
     itemExists,
     vaultExists,
 } from "./core/onepassword";

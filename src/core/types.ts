@@ -80,6 +80,8 @@ export interface ConvertOptions {
     secret: boolean;
     /** Skip confirmation prompts */
     force: boolean;
+    /** Show op CLI output */
+    verbose: boolean;
 }
 
 /**
@@ -94,6 +96,8 @@ export interface InjectOptions {
     dryRun: boolean;
     /** Skip confirmation prompts */
     force: boolean;
+    /** Show op CLI output */
+    verbose: boolean;
 }
 
 /**

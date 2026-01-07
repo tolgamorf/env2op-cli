@@ -58,6 +58,7 @@ await runConvert({
     dryRun: flags.has("dry-run"),
     secret: flags.has("secret"),
     force: flags.has("f") || flags.has("force"),
+    verbose: flags.has("verbose"),
 });
 
 function showHelp(): void {
@@ -81,6 +82,7 @@ ${pc.bold("OPTIONS")}
   ${pc.cyan("-f, --force")}    Skip confirmation prompts
   ${pc.cyan("--dry-run")}      Preview actions without executing
   ${pc.cyan("--secret")}       Store all fields as password type (hidden)
+  ${pc.cyan("--verbose")}      Show op CLI output
   ${pc.cyan("-h, --help")}     Show this help message
   ${pc.cyan("-v, --version")}  Show version
 

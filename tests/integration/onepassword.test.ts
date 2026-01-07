@@ -14,8 +14,8 @@ describe("onepassword module", () => {
         expect(typeof op.vaultExists).toBe("function");
         expect(typeof op.createVault).toBe("function");
         expect(typeof op.itemExists).toBe("function");
-        expect(typeof op.deleteItem).toBe("function");
         expect(typeof op.createSecureNote).toBe("function");
+        expect(typeof op.editSecureNote).toBe("function");
     });
 
     test("functions return promises", async () => {
@@ -37,8 +37,14 @@ describe("onepassword module - mocked at module level", () => {
             vaultExists: async () => true,
             createVault: async () => {},
             itemExists: async () => false,
-            deleteItem: async () => {},
             createSecureNote: async () => ({
+                id: "item123",
+                title: "Test",
+                vault: "Personal",
+                vaultId: "vault123",
+                fieldIds: {},
+            }),
+            editSecureNote: async () => ({
                 id: "item123",
                 title: "Test",
                 vault: "Personal",
@@ -59,8 +65,8 @@ describe("onepassword module - mocked at module level", () => {
             vaultExists: async () => false,
             createVault: async () => {},
             itemExists: async () => false,
-            deleteItem: async () => {},
             createSecureNote: async () => ({}),
+            editSecureNote: async () => ({}),
         }));
 
         const { checkOpCli } = await import("../../src/core/onepassword");

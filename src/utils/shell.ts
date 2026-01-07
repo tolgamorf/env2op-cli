@@ -12,7 +12,7 @@ interface ExecOptions {
 }
 
 function quoteArg(arg: string): string {
-    if (/[ \[\]'"\\=]/.test(arg)) {
+    if (/[ [\]'"\\=]/.test(arg)) {
         return `'${arg.replace(/'/g, "'\\''")}'`;
     }
     return arg;

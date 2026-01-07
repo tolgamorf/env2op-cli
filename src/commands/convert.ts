@@ -1,6 +1,6 @@
 import { basename, dirname, join } from "node:path";
-import * as p from "@clack/prompts";
 import { setTimeout } from "node:timers/promises";
+import * as p from "@clack/prompts";
 import { parseEnvFile, validateParseResult } from "../core/env-parser";
 
 const MIN_SPINNER_TIME = 500; // Minimum time to show spinner state (ms)
@@ -12,6 +12,7 @@ async function withMinTime<T>(promise: Promise<T>, minTime = MIN_SPINNER_TIME): 
     const [result] = await Promise.all([promise, setTimeout(minTime)]);
     return result;
 }
+
 import {
     checkOpCli,
     checkSignedIn,

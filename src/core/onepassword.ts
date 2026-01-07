@@ -2,7 +2,6 @@ import { errors } from "../utils/errors";
 import { exec, execJson } from "../utils/shell";
 import type { CreateItemOptions, CreateItemResult } from "./types";
 
-
 interface VerboseOption {
     verbose?: boolean;
 }
@@ -104,7 +103,11 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
         }
 
         // Step 2: Get the created item info
-        const getResult = await execJson<OpItemResult>("op", ["item", "get", title, "--vault", vault, "--format", "json"], { verbose });
+        const getResult = await execJson<OpItemResult>(
+            "op",
+            ["item", "get", title, "--vault", vault, "--format", "json"],
+            { verbose },
+        );
 
         // Extract field IDs mapped by label
         const fieldIds: Record<string, string> = {};
@@ -139,7 +142,11 @@ export async function editSecureNote(options: CreateItemOptions & VerboseOption)
 
     try {
         // Step 1: Get current item to find fields that need to be deleted
-        const currentItem = await execJson<OpItemResult>("op", ["item", "get", title, "--vault", vault, "--format", "json"], { verbose });
+        const currentItem = await execJson<OpItemResult>(
+            "op",
+            ["item", "get", title, "--vault", vault, "--format", "json"],
+            { verbose },
+        );
 
         // Get existing field labels (excluding built-in fields like "notesPlain")
         const existingLabels = new Set(
@@ -169,7 +176,11 @@ export async function editSecureNote(options: CreateItemOptions & VerboseOption)
         }
 
         // Step 3: Get the updated item info
-        const getResult = await execJson<OpItemResult>("op", ["item", "get", title, "--vault", vault, "--format", "json"], { verbose });
+        const getResult = await execJson<OpItemResult>(
+            "op",
+            ["item", "get", title, "--vault", vault, "--format", "json"],
+            { verbose },
+        );
 
         // Extract field IDs mapped by label
         const fieldIds: Record<string, string> = {};

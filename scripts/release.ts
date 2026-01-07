@@ -321,6 +321,35 @@ async function release() {
 
     console.log(`Released ${tag}`);
 
+    // Wait for the Publish workflow to complete (triggered by tag push)
+    console.log("Waiting for npm publish workflow to complete...");
+
+    // Get the commit SHA for the tag we just created
+    const headSha = await $`git rev-parse HEAD`.text();
+    const commitSha = headSha.trim();
+
+    // Poll for the workflow run (it may take a moment to start)
+    let runId: number | null = null;
+    for (let attempt = 1; attempt <= 12; attempt++) {
+        const runs = await $`gh run list --workflow=publish.yml --limit=5 --json databaseId,headSha,status`
+            .quiet()
+            .json();
+        const matchingRun = runs.find((run: { headSha: string }) => run.headSha === commitSha);
+        if (matchingRun) {
+            runId = matchingRun.databaseId;
+            break;
+        }
+        console.log(`  Waiting for workflow to start... (${attempt}/12)`);
+        await Bun.sleep(5000);
+    }
+
+    if (runId) {
+        await $`gh run watch ${runId}`;
+        console.log("Publish workflow completed");
+    } else {
+        console.log("Warning: Could not find publish workflow run. Continuing with Homebrew update...");
+    }
+
     // Update Homebrew tap
     console.log("Updating Homebrew tap...");
     const sha256 = await fetchSha256(newVersion);

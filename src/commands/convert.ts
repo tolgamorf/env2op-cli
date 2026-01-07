@@ -152,9 +152,9 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             // Check if item already exists
             const itemSpinner = p.spinner();
             itemSpinner.start(`Checking for item "${itemName}"...`);
-            const exists = await withMinTime(itemExists(vault, itemName, { verbose }));
+            const existingItemId = await withMinTime(itemExists(vault, itemName, { verbose }));
 
-            if (exists) {
+            if (existingItemId) {
                 itemSpinner.stop(`Item "${itemName}" found`);
 
                 // Item exists - update it in place (preserves UUID, avoids trash)
@@ -173,16 +173,18 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             }
 
             // Push environment variables to 1Password
-            logger.step("Pushing environment variables...");
+            const pushSpinner = p.spinner();
+            pushSpinner.start("Pushing environment variables...");
 
             try {
-                if (exists) {
+                if (existingItemId) {
                     itemResult = await editSecureNote({
                         vault,
                         title: itemName,
                         fields: variables,
                         secret,
                         verbose,
+                        itemId: existingItemId,
                     });
                 } else {
                     itemResult = await createSecureNote({
@@ -194,14 +196,13 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                     });
                 }
 
-                logger.message("Completed");
-                logger.success(
-                    exists
+                pushSpinner.stop(
+                    existingItemId
                         ? `Updated "${itemResult.title}" in vault "${itemResult.vault}"`
                         : `Created "${itemResult.title}" in vault "${itemResult.vault}"`,
                 );
             } catch (error) {
-                logger.error(exists ? "Failed to update Secure Note" : "Failed to create Secure Note");
+                pushSpinner.stop(existingItemId ? "Failed to update Secure Note" : "Failed to create Secure Note");
                 throw error;
             }
         }

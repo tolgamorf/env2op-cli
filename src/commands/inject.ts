@@ -124,7 +124,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
         // Step 4: Run op inject
         // Don't use spinner in verbose mode - it interferes with command output
         const spinner = verbose ? null : logger.spinner();
-        spinner?.start("Injecting secrets from 1Password...");
+        spinner?.start("Pulling secrets from 1Password...");
 
         try {
             const result = await withMinTime(
@@ -141,17 +141,23 @@ export async function runInject(options: InjectOptions): Promise<void> {
             const header = generateEnvHeader(basename(outputPath)).join("\n");
             writeFileSync(outputPath, header + envContent, "utf-8");
 
+            // Count variables (non-empty, non-comment lines)
+            const varCount = envContent
+                .split("\n")
+                .filter((line) => line.trim() && !line.trim().startsWith("#")).length;
+
+            const stopMessage = `Generated ${basename(outputPath)} — ${varCount} variable${varCount === 1 ? "" : "s"}`;
             if (spinner) {
-                spinner.stop(`Generated: ${outputPath}`);
+                spinner.stop(stopMessage);
             } else {
-                logger.success(`Generated: ${outputPath}`);
+                logger.success(stopMessage);
             }
         } catch (error) {
-            spinner?.stop("Failed to inject secrets");
+            spinner?.stop("Failed to pull secrets");
             // Extract stderr from error
             const stderr = (error as { stderr?: string })?.stderr;
             const message = stderr || (error instanceof Error ? error.message : String(error));
-            throw new Env2OpError("Failed to inject secrets from 1Password", "INJECT_FAILED", message);
+            throw new Env2OpError("Failed to pull secrets from 1Password", "INJECT_FAILED", message);
         }
 
         logger.outro("Done! Your .env file is ready");

@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import pc from "picocolors";
 
 interface ExecResult {
@@ -29,23 +29,6 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
         console.log(pc.dim(`$ ${fullCommand}`));
     }
 
-    // Check if command has field arguments (like KEY[type]=value)
-    const hasFieldArgs = args.some((arg) => /\[.+\]=/.test(arg));
-
-    if (hasFieldArgs) {
-        // Commands with field args MUST use spawnSync with stdio inherit - op CLI hangs otherwise
-        const result = spawnSync("bash", ["-c", fullCommand], {
-            stdio: "inherit",
-        });
-
-        return {
-            stdout: "",
-            stderr: "",
-            exitCode: result.status ?? 0,
-        };
-    }
-
-    // For other commands, use async spawn to not block the event loop (allows spinner animation)
     return new Promise((resolve) => {
         const proc = spawn(command, args, {
             stdio: ["ignore", "pipe", "pipe"],
@@ -111,6 +94,58 @@ interface ExecError extends Error {
     stderr: string;
     stdout: string;
     exitCode: number;
+}
+
+interface ExecWithStdinOptions extends ExecOptions {
+    stdin: string;
+}
+
+/**
+ * Execute a shell command with content piped to stdin
+ */
+export async function execWithStdin(
+    command: string,
+    args: string[] = [],
+    options: ExecWithStdinOptions,
+): Promise<ExecResult> {
+    const { stdin: stdinContent, verbose = false } = options;
+
+    if (verbose) {
+        const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
+        console.log(pc.dim(`$ echo '...' | ${fullCommand}`));
+    }
+
+    return new Promise((resolve) => {
+        const proc = spawn(command, args, {
+            stdio: ["pipe", "pipe", "pipe"],
+        });
+
+        let stdout = "";
+        let stderr = "";
+
+        proc.stdin?.write(stdinContent);
+        proc.stdin?.end();
+
+        proc.stdout?.on("data", (data: Buffer) => {
+            const text = data.toString();
+            stdout += text;
+            if (verbose) process.stdout.write(text);
+        });
+
+        proc.stderr?.on("data", (data: Buffer) => {
+            const text = data.toString();
+            stderr += text;
+            if (verbose) process.stderr.write(text);
+        });
+
+        proc.on("close", (code) => {
+            resolve({ stdout, stderr, exitCode: code ?? 0 });
+        });
+
+        proc.on("error", () => {
+            resolve({ stdout, stderr, exitCode: 1 });
+        });
+    });
 }
 
 /**

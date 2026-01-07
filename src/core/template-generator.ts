@@ -128,5 +128,5 @@ export function writeTemplate(content: string, outputPath: string): void {
  * Generate usage instructions for display
  */
 export function generateUsageInstructions(templatePath: string): string {
-    return ["", "Usage:", `  op2env ${templatePath}`, `  op run --env-file ${templatePath} -- npm start`].join("\n");
+    return ["Usage:", `  op2env ${templatePath}`, `  op run --env-file ${templatePath} -- npm start`].join("\n");
 }

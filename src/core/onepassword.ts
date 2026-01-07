@@ -1,6 +1,6 @@
 import { errors } from "../utils/errors";
-import { exec, execJson } from "../utils/shell";
-import type { CreateItemOptions, CreateItemResult } from "./types";
+import { exec, execWithStdin } from "../utils/shell";
+import type { CreateItemOptions, CreateItemResult, EditItemOptions } from "./types";
 
 interface VerboseOption {
     verbose?: boolean;
@@ -31,18 +31,19 @@ export async function signIn(options: VerboseOption = {}): Promise<boolean> {
 }
 
 /**
- * Check if an item exists in a vault using item list
+ * Check if an item exists in a vault, return its ID if found
  */
-export async function itemExists(vault: string, title: string, options: VerboseOption = {}): Promise<boolean> {
+export async function itemExists(vault: string, title: string, options: VerboseOption = {}): Promise<string | null> {
     const result = await exec("op", ["item", "list", "--vault", vault, "--format", "json"], options);
     if (result.exitCode !== 0) {
-        return false;
+        return null;
     }
     try {
-        const items = JSON.parse(result.stdout) as Array<{ title: string }>;
-        return items.some((item) => item.title === title);
+        const items = JSON.parse(result.stdout) as Array<{ id: string; title: string }>;
+        const item = items.find((item) => item.title === title);
+        return item?.id ?? null;
     } catch {
-        return false;
+        return null;
     }
 }
 
@@ -81,57 +82,70 @@ interface OpItemResult {
     fields?: Array<{ label: string; id: string; type?: string }>;
 }
 
+interface OpItemTemplate {
+    title: string;
+    vault: { name: string };
+    category: string;
+    fields: Array<{
+        type: "STRING" | "CONCEALED";
+        label: string;
+        value: string;
+    }>;
+}
+
+/**
+ * Build JSON template for 1Password item (works for both create and edit)
+ */
+function buildItemTemplate(
+    title: string,
+    vault: string,
+    fields: Array<{ key: string; value: string }>,
+    secret: boolean,
+): OpItemTemplate {
+    const fieldType = secret ? "CONCEALED" : "STRING";
+    return {
+        title,
+        vault: { name: vault },
+        category: "SECURE_NOTE",
+        fields: fields.map(({ key, value }) => ({
+            type: fieldType,
+            label: key,
+            value,
+        })),
+    };
+}
+
 /**
  * Create a Secure Note in 1Password with the given fields
  */
 export async function createSecureNote(options: CreateItemOptions & VerboseOption): Promise<CreateItemResult> {
     const { vault, title, fields, secret, verbose } = options;
 
-    // Build field arguments
-    const fieldType = secret ? "password" : "text";
-    const fieldArgs = fields.map(({ key, value }) => `${key}[${fieldType}]=${value}`);
+    const template = buildItemTemplate(title, vault, fields, secret);
+    const json = JSON.stringify(template);
 
     try {
-        // Step 1: Create the item (no --format=json, op CLI hangs with it when piped)
-        const createArgs = [
-            "item",
-            "create",
-            "--category",
-            "Secure Note",
-            "--vault",
-            vault,
-            "--title",
-            title,
-            ...fieldArgs,
-        ];
+        const result = await execWithStdin("op", ["item", "create", "--format", "json"], { stdin: json, verbose });
 
-        const createResult = await exec("op", createArgs, { verbose });
-        if (createResult.exitCode !== 0) {
-            throw new Error(createResult.stderr || "Failed to create item");
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || "Failed to create item");
         }
 
-        // Step 2: Get the created item info
-        const getResult = await execJson<OpItemResult>(
-            "op",
-            ["item", "get", title, "--vault", vault, "--format", "json"],
-            { verbose },
-        );
+        const item = JSON.parse(result.stdout) as OpItemResult;
 
         // Extract field IDs mapped by label
         const fieldIds: Record<string, string> = {};
-        if (Array.isArray(getResult.fields)) {
-            for (const field of getResult.fields) {
-                if (field.label && field.id) {
-                    fieldIds[field.label] = field.id;
-                }
+        for (const field of item.fields ?? []) {
+            if (field.label && field.id) {
+                fieldIds[field.label] = field.id;
             }
         }
 
         return {
-            id: getResult.id,
-            title: getResult.title,
-            vault: getResult.vault?.name ?? vault,
-            vaultId: getResult.vault?.id ?? "",
+            id: item.id,
+            title: item.title,
+            vault: item.vault?.name ?? vault,
+            vaultId: item.vault?.id ?? "",
             fieldIds,
         };
     } catch (error) {
@@ -143,68 +157,39 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
 /**
  * Edit an existing Secure Note in 1Password - updates fields in place
  * This preserves the item UUID and doesn't add to trash
- * Fields that exist in the item but not in the new fields will be deleted
+ * JSON piping completely replaces fields - no need for manual deletion
  */
-export async function editSecureNote(options: CreateItemOptions & VerboseOption): Promise<CreateItemResult> {
-    const { vault, title, fields, secret, verbose } = options;
+export async function editSecureNote(options: EditItemOptions & VerboseOption): Promise<CreateItemResult> {
+    const { vault, title, fields, secret, verbose, itemId } = options;
+
+    const template = buildItemTemplate(title, vault, fields, secret);
+    const json = JSON.stringify(template);
 
     try {
-        // Step 1: Get current item to find fields that need to be deleted
-        const currentItem = await execJson<OpItemResult>(
-            "op",
-            ["item", "get", title, "--vault", vault, "--format", "json"],
-            { verbose },
-        );
+        const result = await execWithStdin("op", ["item", "edit", itemId, "--format", "json"], {
+            stdin: json,
+            verbose,
+        });
 
-        // Get existing field labels (excluding built-in fields like "notesPlain")
-        const existingLabels = new Set(
-            (currentItem.fields ?? [])
-                .filter((f) => f.label && f.id && !f.id.startsWith("notesPlain"))
-                .map((f) => f.label),
-        );
-
-        // Get new field keys
-        const newKeys = new Set(fields.map((f) => f.key));
-
-        // Fields to delete: exist in item but not in new fields
-        const deleteArgs = [...existingLabels]
-            .filter((label) => !newKeys.has(label))
-            .map((label) => `${label}[delete]`);
-
-        // Build field arguments for update/add
-        const fieldType = secret ? "password" : "text";
-        const fieldArgs = fields.map(({ key, value }) => `${key}[${fieldType}]=${value}`);
-
-        // Step 2: Edit the item - delete first, then update/add
-        const editArgs = ["item", "edit", title, "--vault", vault, ...deleteArgs, ...fieldArgs];
-
-        const editResult = await exec("op", editArgs, { verbose });
-        if (editResult.exitCode !== 0) {
-            throw new Error(editResult.stderr || "Failed to edit item");
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || "Failed to edit item");
         }
 
-        // Step 3: Get the updated item info
-        const getResult = await execJson<OpItemResult>(
-            "op",
-            ["item", "get", title, "--vault", vault, "--format", "json"],
-            { verbose },
-        );
+        const item = JSON.parse(result.stdout) as OpItemResult;
 
         // Extract field IDs mapped by label
         const fieldIds: Record<string, string> = {};
-        if (Array.isArray(getResult.fields)) {
-            for (const field of getResult.fields) {
-                if (field.label && field.id) {
-                    fieldIds[field.label] = field.id;
-                }
+        for (const field of item.fields ?? []) {
+            if (field.label && field.id) {
+                fieldIds[field.label] = field.id;
             }
         }
 
         return {
-            id: getResult.id,
-            title: getResult.title,
-            vault: getResult.vault?.name ?? vault,
-            vaultId: getResult.vault?.id ?? "",
+            id: item.id,
+            title: item.title,
+            vault: item.vault?.name ?? vault,
+            vaultId: item.vault?.id ?? "",
             fieldIds,
         };
     } catch (error) {

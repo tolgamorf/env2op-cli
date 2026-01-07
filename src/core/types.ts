@@ -47,6 +47,14 @@ export interface CreateItemOptions {
 }
 
 /**
+ * Options for editing a 1Password Secure Note
+ */
+export interface EditItemOptions extends CreateItemOptions {
+    /** Item ID for reliable lookup (more robust than using title) */
+    itemId: string;
+}
+
+/**
  * Result of creating a 1Password item
  */
 export interface CreateItemResult {

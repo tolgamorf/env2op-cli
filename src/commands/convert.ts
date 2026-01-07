@@ -1,6 +1,17 @@
 import { basename, dirname, join } from "node:path";
 import * as p from "@clack/prompts";
+import { setTimeout } from "node:timers/promises";
 import { parseEnvFile, validateParseResult } from "../core/env-parser";
+
+const MIN_SPINNER_TIME = 500; // Minimum time to show spinner state (ms)
+
+/**
+ * Run an async operation with minimum display time for the spinner
+ */
+async function withMinTime<T>(promise: Promise<T>, minTime = MIN_SPINNER_TIME): Promise<T> {
+    const [result] = await Promise.all([promise, setTimeout(minTime)]);
+    return result;
+}
 import {
     checkOpCli,
     checkSignedIn,
@@ -32,8 +43,8 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 
         const { variables, lines } = parseResult;
 
-        logger.success(`Parsed ${basename(envFile)}`);
-        logger.message(`Found ${variables.length} environment variable${variables.length === 1 ? "" : "s"}`);
+        const varCount = variables.length;
+        logger.success(`Parsed ${basename(envFile)} — found ${varCount} variable${varCount === 1 ? "" : "s"}`);
 
         // Show parse errors as warnings
         for (const error of parseResult.errors) {
@@ -44,15 +55,29 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
         let itemResult: CreateItemResult | null = null;
 
         if (dryRun) {
-            logger.warn("Would create Secure Note");
+            logger.step("Checking 1Password CLI...");
+            logger.warn("Would check if 1Password CLI is installed and authenticated");
+
+            logger.step(`Checking for vault "${vault}"...`);
+            logger.warn(`Would check if vault "${vault}" exists`);
+
+            logger.step(`Checking for item "${itemName}"...`);
+            logger.warn(`Would check if item "${itemName}" exists`);
+
+            logger.step("Pushing environment variables...");
+            logger.warn("Would push to 1Password:");
             logger.keyValue("Vault", vault);
             logger.keyValue("Title", itemName);
             logger.keyValue("Type", secret ? "password (hidden)" : "text (visible)");
             logger.keyValue("Fields", logger.formatFields(variables.map((v) => v.key)));
         } else {
             // Check 1Password CLI before attempting
+            const authSpinner = p.spinner();
+            authSpinner.start("Checking 1Password CLI...");
+
             const opInstalled = await checkOpCli({ verbose });
             if (!opInstalled) {
+                authSpinner.stop("1Password CLI not found");
                 throw new Env2OpError(
                     "1Password CLI (op) is not installed",
                     "OP_CLI_NOT_INSTALLED",
@@ -62,6 +87,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 
             const signedIn = await checkSignedIn({ verbose });
             if (!signedIn) {
+                authSpinner.stop("Not signed in to 1Password");
                 throw new Env2OpError(
                     "Not signed in to 1Password CLI",
                     "OP_NOT_SIGNED_IN",
@@ -69,18 +95,24 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                 );
             }
 
+            authSpinner.stop("1Password CLI ready");
+
             // Check if vault exists
-            const vaultFound = await vaultExists(vault, { verbose });
+            const vaultSpinner = p.spinner();
+            vaultSpinner.start(`Checking for vault "${vault}"...`);
+            const vaultFound = await withMinTime(vaultExists(vault, { verbose }));
 
             if (vaultFound) {
-                logger.success(`Vault "${vault}" found`);
+                vaultSpinner.stop(`Vault "${vault}" found`);
             } else {
                 if (force) {
                     // Auto-create vault
-                    logger.warn(`Vault "${vault}" not found, creating...`);
+                    vaultSpinner.message(`Vault "${vault}" not found, creating...`);
                     await createVault(vault, { verbose });
-                    logger.success(`Created vault "${vault}"`);
+                    vaultSpinner.stop(`Created vault "${vault}"`);
                 } else {
+                    vaultSpinner.stop(`Vault "${vault}" not found`);
+
                     // Ask for confirmation to create vault
                     const shouldCreate = await p.confirm({
                         message: `Vault "${vault}" does not exist. Create it?`,
@@ -92,17 +124,21 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                         process.exit(0);
                     }
 
-                    const spinner = logger.spinner();
-                    spinner.start(`Creating vault "${vault}"...`);
+                    const createSpinner = p.spinner();
+                    createSpinner.start(`Creating vault "${vault}"...`);
                     await createVault(vault, { verbose });
-                    spinner.stop(`Created vault "${vault}"`);
+                    createSpinner.stop(`Created vault "${vault}"`);
                 }
             }
 
             // Check if item already exists
-            const exists = await itemExists(vault, itemName, { verbose });
+            const itemSpinner = p.spinner();
+            itemSpinner.start(`Checking for item "${itemName}"...`);
+            const exists = await withMinTime(itemExists(vault, itemName, { verbose }));
 
             if (exists) {
+                itemSpinner.stop(`Item "${itemName}" found`);
+
                 // Item exists - update it in place (preserves UUID, avoids trash)
                 if (!force) {
                     const shouldOverwrite = await p.confirm({
@@ -114,12 +150,15 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                         process.exit(0);
                     }
                 }
+            } else {
+                itemSpinner.stop(`Item "${itemName}" not found`);
+            }
 
-                // Don't use spinner in verbose mode - it interferes with command output
-                const spinner = verbose ? null : logger.spinner();
-                spinner?.start(`Updating "${itemName}"...`);
+            // Push environment variables to 1Password
+            logger.step("Pushing environment variables...");
 
-                try {
+            try {
+                if (exists) {
                     itemResult = await editSecureNote({
                         vault,
                         title: itemName,
@@ -127,23 +166,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                         secret,
                         verbose,
                     });
-
-                    if (spinner) {
-                        spinner.stop(`Updated "${itemResult.title}" in vault "${itemResult.vault}"`);
-                    } else {
-                        logger.success(`Updated "${itemResult.title}" in vault "${itemResult.vault}"`);
-                    }
-                } catch (error) {
-                    spinner?.stop("Failed to update Secure Note");
-                    throw error;
-                }
-            } else {
-                // Item doesn't exist - create new
-                // Don't use spinner in verbose mode - it interferes with command output
-                const spinner = verbose ? null : logger.spinner();
-                spinner?.start("Creating 1Password Secure Note...");
-
-                try {
+                } else {
                     itemResult = await createSecureNote({
                         vault,
                         title: itemName,
@@ -151,16 +174,17 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                         secret,
                         verbose,
                     });
-
-                    if (spinner) {
-                        spinner.stop(`Created "${itemResult.title}" in vault "${itemResult.vault}"`);
-                    } else {
-                        logger.success(`Created "${itemResult.title}" in vault "${itemResult.vault}"`);
-                    }
-                } catch (error) {
-                    spinner?.stop("Failed to create Secure Note");
-                    throw error;
                 }
+
+                logger.message("Completed");
+                logger.success(
+                    exists
+                        ? `Updated "${itemResult.title}" in vault "${itemResult.vault}"`
+                        : `Created "${itemResult.title}" in vault "${itemResult.vault}"`,
+                );
+            } catch (error) {
+                logger.error(exists ? "Failed to update Secure Note" : "Failed to create Secure Note");
+                throw error;
             }
         }
 

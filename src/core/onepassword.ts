@@ -43,8 +43,16 @@ export async function itemExists(vault: string, title: string, options: VerboseO
  * Check if a vault exists
  */
 export async function vaultExists(vault: string, options: VerboseOption = {}): Promise<boolean> {
-    const result = await exec("op", ["vault", "get", vault, "--format", "json"], options);
-    return result.exitCode === 0;
+    const result = await exec("op", ["vault", "list", "--format", "json"], options);
+    if (result.exitCode !== 0) {
+        return false;
+    }
+    try {
+        const vaults = JSON.parse(result.stdout) as Array<{ name: string }>;
+        return vaults.some((v) => v.name === vault);
+    } catch {
+        return false;
+    }
 }
 
 /**

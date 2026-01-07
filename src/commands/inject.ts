@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
+import { setTimeout } from "node:timers/promises";
 import * as p from "@clack/prompts";
 import { stripHeaders } from "../core/env-parser";
 import { checkOpCli, checkSignedIn } from "../core/onepassword";
@@ -8,6 +9,13 @@ import type { InjectOptions } from "../core/types";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { exec } from "../utils/shell";
+
+const MIN_SPINNER_TIME = 500;
+
+async function withMinTime<T>(promise: Promise<T>, minTime = MIN_SPINNER_TIME): Promise<T> {
+    const [result] = await Promise.all([promise, setTimeout(minTime)]);
+    return result;
+}
 
 /**
  * Derive output path from template path
@@ -47,8 +55,12 @@ export async function runInject(options: InjectOptions): Promise<void> {
 
         // Step 2: Check 1Password CLI
         if (!dryRun) {
+            const authSpinner = p.spinner();
+            authSpinner.start("Checking 1Password CLI...");
+
             const opInstalled = await checkOpCli({ verbose });
             if (!opInstalled) {
+                authSpinner.stop("1Password CLI not found");
                 throw new Env2OpError(
                     "1Password CLI (op) is not installed",
                     "OP_CLI_NOT_INSTALLED",
@@ -58,12 +70,15 @@ export async function runInject(options: InjectOptions): Promise<void> {
 
             const signedIn = await checkSignedIn({ verbose });
             if (!signedIn) {
+                authSpinner.stop("Not signed in to 1Password");
                 throw new Env2OpError(
                     "Not signed in to 1Password CLI",
                     "OP_NOT_SIGNED_IN",
                     'Run "op signin" to authenticate',
                 );
             }
+
+            authSpinner.stop("1Password CLI ready");
         }
 
         // Step 3: Check if output file exists
@@ -96,7 +111,9 @@ export async function runInject(options: InjectOptions): Promise<void> {
         spinner?.start("Injecting secrets from 1Password...");
 
         try {
-            const result = await exec("op", ["inject", "-i", templateFile, "-o", outputPath, "-f"], { verbose });
+            const result = await withMinTime(
+                exec("op", ["inject", "-i", templateFile, "-o", outputPath, "-f"], { verbose }),
+            );
 
             if (result.exitCode !== 0) {
                 throw new Error(result.stderr);

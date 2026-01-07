@@ -18,7 +18,15 @@ export async function checkOpCli(options: VerboseOption = {}): Promise<boolean> 
  * Check if user is signed in to 1Password CLI
  */
 export async function checkSignedIn(options: VerboseOption = {}): Promise<boolean> {
-    const result = await exec("op", ["account", "get", "--format", "json"], options);
+    const result = await exec("op", ["whoami", "--format", "json"], options);
+    return result.exitCode === 0;
+}
+
+/**
+ * Sign in to 1Password CLI (opens system auth dialog)
+ */
+export async function signIn(options: VerboseOption = {}): Promise<boolean> {
+    const result = await exec("op", ["signin"], options);
     return result.exitCode === 0;
 }
 

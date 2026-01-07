@@ -14,6 +14,7 @@ export {
     createVault,
     editSecureNote,
     itemExists,
+    signIn,
     vaultExists,
 } from "./core/onepassword";
 // Template generation

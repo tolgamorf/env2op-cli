@@ -3,7 +3,7 @@ import { basename } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import * as p from "@clack/prompts";
 import { stripHeaders } from "../core/env-parser";
-import { checkOpCli, checkSignedIn } from "../core/onepassword";
+import { checkOpCli, checkSignedIn, signIn } from "../core/onepassword";
 import { generateEnvHeader } from "../core/template-generator";
 import type { InjectOptions } from "../core/types";
 import { Env2OpError } from "../utils/errors";
@@ -68,14 +68,30 @@ export async function runInject(options: InjectOptions): Promise<void> {
                 );
             }
 
-            const signedIn = await checkSignedIn({ verbose });
+            let signedIn = await checkSignedIn({ verbose });
             if (!signedIn) {
-                authSpinner.stop("Not signed in to 1Password");
-                throw new Env2OpError(
-                    "Not signed in to 1Password CLI",
-                    "OP_NOT_SIGNED_IN",
-                    'Run "op signin" to authenticate',
-                );
+                authSpinner.message("Signing in to 1Password...");
+
+                const signInSuccess = await signIn({ verbose });
+                if (!signInSuccess) {
+                    authSpinner.stop();
+                    throw new Env2OpError(
+                        "Failed to sign in to 1Password CLI",
+                        "OP_SIGNIN_FAILED",
+                        'Try running "op signin" manually',
+                    );
+                }
+
+                // Verify sign-in was successful
+                signedIn = await checkSignedIn({ verbose });
+                if (!signedIn) {
+                    authSpinner.stop();
+                    throw new Env2OpError(
+                        "Not signed in to 1Password CLI",
+                        "OP_NOT_SIGNED_IN",
+                        'Run "op signin" to authenticate',
+                    );
+                }
             }
 
             authSpinner.stop("1Password CLI ready");

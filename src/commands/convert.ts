@@ -20,6 +20,7 @@ import {
     createVault,
     editSecureNote,
     itemExists,
+    signIn,
     vaultExists,
 } from "../core/onepassword";
 import { generateTemplateContent, generateUsageInstructions, writeTemplate } from "../core/template-generator";
@@ -86,14 +87,30 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                 );
             }
 
-            const signedIn = await checkSignedIn({ verbose });
+            let signedIn = await checkSignedIn({ verbose });
             if (!signedIn) {
-                authSpinner.stop("Not signed in to 1Password");
-                throw new Env2OpError(
-                    "Not signed in to 1Password CLI",
-                    "OP_NOT_SIGNED_IN",
-                    'Run "op signin" to authenticate',
-                );
+                authSpinner.message("Signing in to 1Password...");
+
+                const signInSuccess = await signIn({ verbose });
+                if (!signInSuccess) {
+                    authSpinner.stop();
+                    throw new Env2OpError(
+                        "Failed to sign in to 1Password CLI",
+                        "OP_SIGNIN_FAILED",
+                        'Try running "op signin" manually',
+                    );
+                }
+
+                // Verify sign-in was successful
+                signedIn = await checkSignedIn({ verbose });
+                if (!signedIn) {
+                    authSpinner.stop();
+                    throw new Env2OpError(
+                        "Not signed in to 1Password CLI",
+                        "OP_NOT_SIGNED_IN",
+                        'Run "op signin" to authenticate',
+                    );
+                }
             }
 
             authSpinner.stop("1Password CLI ready");

@@ -1,6 +1,6 @@
 {
   "name": "@tolgamorf/env2op-cli",
-  "version": "1.1.5",
+  "version": "0.2.0",
   "description": "Convert .env files to 1Password Secure Notes and generate templates for op inject/run",
   "type": "module",
   "main": "dist/index.js",

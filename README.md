@@ -1,6 +1,21 @@
-# env2op & op2env
+# 🔐 env2op ⇄ op2env
 
-Push `.env` files to 1Password and pull them back with two simple commands.
+### Push `.env` files to [1Password](https://1password.com) and pull them back with two simple commands.
+
+[![npm version](https://img.shields.io/npm/v/@tolgamorf/env2op-cli)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
+![GitHub Release Date](https://img.shields.io/github/release-date/tolgamorf/env2op-cli)
+[![npm downloads](https://img.shields.io/npm/dm/@tolgamorf/env2op-cli)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
+[![install size](https://packagephobia.com/badge?p=@tolgamorf/env2op-cli@0.2.2)](https://packagephobia.com/result?p=@tolgamorf/env2op-cli@0.2.2)
+[![GitHub last commit](https://img.shields.io/github/last-commit/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/commits/main)
+[![CI](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<!--
+[![Bun](https://img.shields.io/badge/Bun-compatible-fbf0df.svg)](https://bun.sh/)
+[![GitHub commits since latest release]](https://img.shields.io/github/commits-since/tolgamorf/env2op-cli/latest)
+[![GitHub stars](https://img.shields.io/github/stars/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/stargazers)
+-->
 
 ![env2op demo](./demo/env2op-demo.gif)
 

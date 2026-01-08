@@ -5,15 +5,14 @@
 ![GitHub Release Date](https://img.shields.io/github/release-date/tolgamorf/env2op-cli)
 [![npm downloads](https://img.shields.io/npm/dm/@tolgamorf/env2op-cli)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
 [![install size](https://packagephobia.com/badge?p=@tolgamorf/env2op-cli@0.2.2)](https://packagephobia.com/result?p=@tolgamorf/env2op-cli@0.2.2)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@tolgamorf/env2op-cli)](https://bundlephobia.com/package/@tolgamorf/env2op-cli)
 [![GitHub last commit](https://img.shields.io/github/last-commit/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/commits/main)
 [![GitHub commits since latest release](https://img.shields.io/github/commits-since/tolgamorf/env2op-cli/latest)](https://github.com/tolgamorf/env2op-cli/commits/main)
-
 [![Node.js](https://img.shields.io/node/v/@tolgamorf/env2op-cli?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/github/package-json/dependency-version/tolgamorf/env2op-cli/dev/typescript?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![ESM](https://img.shields.io/badge/ESM-only-F7DF1E?logo=javascript&logoColor=white)](https://nodejs.org/api/esm.html)
 [![Bun](https://img.shields.io/badge/Bun-compatible-fbf0df.svg?logo=bun&logoColor=white)](https://bun.sh/)
 [![Biome](https://img.shields.io/badge/Biome-linter-60A5FA?logo=biome&logoColor=white)](https://biomejs.dev/)
-
 [![NPM version](https://img.shields.io/npm/v/@tolgamorf/env2op-cli?logo=npm)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
 [![Homebrew Formula Version](https://img.shields.io/github/v/release/tolgamorf/env2op-cli?logo=homebrew&label=homebrew&color=FBB040)](https://github.com/tolgamorf/homebrew-tap)
 [![CI](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml)
@@ -22,7 +21,6 @@
 [![GitHub License](https://img.shields.io/github/license/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE)
 
 <!--
-[![npm bundle size](https://img.shields.io/bundlephobia/minzip/@tolgamorf/env2op-cli)](https://bundlephobia.com/package/@tolgamorf/env2op-cli)
 [![Socket Badge](https://socket.dev/api/badge/npm/package/@tolgamorf/env2op-cli)](https://socket.dev/npm/package/@tolgamorf/env2op-cli)
 [![GitHub stars](https://img.shields.io/github/stars/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/stargazers)
 -->

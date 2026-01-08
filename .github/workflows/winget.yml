@@ -1,0 +1,49 @@
+name: Update Winget
+
+on:
+  workflow_run:
+    workflows: ["Build Windows"]
+    types: [completed]
+
+jobs:
+  update:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get release version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Get SHA256 from release
+        id: sha256
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $shasums = gh release download "v${{ steps.version.outputs.version }}" --pattern "SHASUMS256.txt" --output -
+          $sha256 = ($shasums -split '\s+')[0].ToUpper()
+          echo "sha256=$sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Install wingetcreate
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Update Winget manifest
+        shell: pwsh
+        env:
+          WINGET_PAT: ${{ secrets.WINGET_PAT }}
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $url = "https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip"
+
+          .\wingetcreate.exe update tolgamorf.env2op-cli `
+            --version $version `
+            --urls $url `
+            --submit `
+            --token $env:WINGET_PAT

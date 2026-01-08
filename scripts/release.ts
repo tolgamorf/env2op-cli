@@ -5,7 +5,7 @@ import { $ } from "bun";
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
 
 function generateFormula(version: string, sha256: string, versioned: boolean): string {
-    const className = versioned ? `Env2opCliAT${version.replace(/\./g, "_")}` : "Env2opCli";
+    const className = versioned ? `Env2opCliAT${version.replace(/\./g, "")}` : "Env2opCli";
 
     return `class ${className} < Formula
   desc "Push .env files to 1Password and pull them back"

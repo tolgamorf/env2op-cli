@@ -42,6 +42,26 @@ Or in a single command:
 brew install tolgamorf/tap/env2op-cli
 ```
 
+<!--
+### Windows Package Managers
+
+#### Scoop
+
+```powershell
+# Add the bucket
+scoop bucket add env2op https://github.com/tolgamorf/scoop-bucket
+
+# Install
+scoop install env2op
+```
+
+#### Winget
+
+```powershell
+winget install tolgamorf.env2op
+```
+-->
+
 ### Package Managers (macOS/Linux/Windows)
 
 #### Global installation

@@ -5,7 +5,7 @@
 
 import { exec } from "../utils/shell";
 
-export type PackageManager = "homebrew" | "npm" | "bun" | "pnpm" | "unknown";
+export type PackageManager = "homebrew" | "npm" | "bun" | "pnpm" | "scoop" | "winget" | "unknown";
 
 export interface PackageManagerInfo {
     type: PackageManager;
@@ -18,6 +18,8 @@ const UPDATE_COMMANDS: Record<PackageManager, string> = {
     npm: "npm update -g @tolgamorf/env2op-cli",
     bun: "bun update -g @tolgamorf/env2op-cli",
     pnpm: "pnpm update -g @tolgamorf/env2op-cli",
+    scoop: "scoop update env2op",
+    winget: "winget upgrade tolgamorf.env2op",
     unknown: "npm update -g @tolgamorf/env2op-cli",
 };
 
@@ -26,6 +28,8 @@ const DISPLAY_NAMES: Record<PackageManager, string> = {
     npm: "npm",
     bun: "Bun",
     pnpm: "pnpm",
+    scoop: "Scoop",
+    winget: "Winget",
     unknown: "npm (default)",
 };
 
@@ -58,6 +62,16 @@ function detectFromPath(): PackageManager | null {
     // NPM global (node_modules paths)
     if (binPath.includes("/node_modules/")) {
         return "npm";
+    }
+
+    // Scoop installation (Windows)
+    if (binPath.includes("/scoop/") || binPath.includes("\\scoop\\")) {
+        return "scoop";
+    }
+
+    // Winget installation (Windows Program Files)
+    if (binPath.includes("/Microsoft/WinGet/") || binPath.includes("\\Microsoft\\WinGet\\")) {
+        return "winget";
     }
 
     return null;

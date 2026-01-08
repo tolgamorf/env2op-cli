@@ -33,7 +33,8 @@
     "format": "bunx biome format --write .",
     "format:check": "bunx biome format .",
     "prepublishOnly": "bun run build",
-    "release": "bun run scripts/release.ts"
+    "release": "bun run scripts/release.ts",
+    "build:windows": "bun build --compile --target=bun-windows-x64 src/cli.ts --outfile dist/env2op.exe && bun build --compile --target=bun-windows-x64 src/op2env-cli.ts --outfile dist/op2env.exe"
   },
   "keywords": [
     "env",

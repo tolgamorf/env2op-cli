@@ -200,5 +200,8 @@ cmake/sources/*.txt
 # Homebrew tap (separate repo)
 homebrew-tap
 
+# Scoop bucket (separate repo)
+scoop-bucket
+
 # Test scripts
 .test

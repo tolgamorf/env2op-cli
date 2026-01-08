@@ -3,6 +3,8 @@
 import { $ } from "bun";
 
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
+const SCOOP_MANIFEST_PATH = "./manifests/scoop/env2op.json";
+const WINGET_MANIFEST_PATH = "./manifests/winget/tolgamorf.env2op.yaml";
 
 function generateFormula(version: string, sha256: string, versioned: boolean): string {
     const className = versioned ? `Env2opCliAT${version.replace(/\./g, "")}` : "Env2opCli";
@@ -79,6 +81,114 @@ async function updateHomebrewTap(version: string, sha256: string): Promise<void>
     await $`git -C ${HOMEBREW_TAP_PATH} add Formula/`;
     await $`git -C ${HOMEBREW_TAP_PATH} commit -m ${`v${version}`}`;
     await $`git -C ${HOMEBREW_TAP_PATH} push`;
+}
+
+async function fetchWindowsZipSha256(version: string, maxRetries = 30): Promise<string> {
+    const url = `https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/SHASUMS256.txt`;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const response = await fetch(url, { redirect: "follow" });
+
+        if (response.ok) {
+            const content = await response.text();
+            // Parse SHASUMS256.txt format: "hash  filename"
+            const match = content.match(/^([a-f0-9]{64})\s+env2op-windows-x64\.zip/m);
+            if (match) {
+                return match[1];
+            }
+            throw new Error("Could not parse SHA256 from SHASUMS256.txt");
+        }
+
+        if (response.status === 404 && attempt < maxRetries) {
+            const waitTime = 10000; // 10s between retries (total ~5 min max wait)
+            console.log(
+                `  SHASUMS256.txt not yet available, retrying in ${waitTime / 1000}s... (${attempt}/${maxRetries})`,
+            );
+            await Bun.sleep(waitTime);
+            continue;
+        }
+
+        throw new Error(`Failed to fetch SHASUMS256.txt: ${response.status}`);
+    }
+
+    throw new Error("Failed to fetch SHASUMS256.txt after max retries");
+}
+
+async function updateScoopManifest(version: string, sha256: string): Promise<void> {
+    const manifest = await Bun.file(SCOOP_MANIFEST_PATH).json();
+
+    manifest.version = version;
+    manifest.architecture["64bit"].url =
+        `https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`;
+    manifest.architecture["64bit"].hash = sha256;
+
+    await Bun.write(SCOOP_MANIFEST_PATH, `${JSON.stringify(manifest, null, 4)}\n`);
+}
+
+async function updateWingetManifest(version: string, sha256: string): Promise<void> {
+    let content = await Bun.file(WINGET_MANIFEST_PATH).text();
+
+    // Update version
+    content = content.replace(/^PackageVersion: .+$/m, `PackageVersion: ${version}`);
+
+    // Update installer URL
+    content = content.replace(
+        /InstallerUrl: .+env2op-windows-x64\.zip$/m,
+        `InstallerUrl: https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`,
+    );
+
+    // Update SHA256
+    content = content.replace(/InstallerSha256: .+$/m, `InstallerSha256: ${sha256}`);
+
+    await Bun.write(WINGET_MANIFEST_PATH, content);
+}
+
+async function updateWindowsManifests(version: string): Promise<void> {
+    console.log("Waiting for Windows build to complete...");
+
+    // Wait for Windows build workflow
+    const tag = `v${version}`;
+    let runId: number | null = null;
+
+    for (let attempt = 1; attempt <= 24; attempt++) {
+        const runs = await $`gh run list --workflow=build-windows.yml --limit=5 --json databaseId,displayTitle,status`
+            .quiet()
+            .json();
+        const matchingRun = runs.find((run: { displayTitle: string }) => run.displayTitle === tag);
+        if (matchingRun) {
+            runId = matchingRun.databaseId;
+            break;
+        }
+        console.log(`  Waiting for Windows build workflow to start... (${attempt}/24)`);
+        await Bun.sleep(5000);
+    }
+
+    if (runId) {
+        await $`gh run watch ${runId}`;
+        console.log("Windows build workflow completed");
+    } else {
+        console.log("Warning: Could not find Windows build workflow run. Skipping manifest updates.");
+        return;
+    }
+
+    // Fetch SHA256 of the Windows ZIP
+    console.log("Fetching Windows ZIP SHA256...");
+    const sha256 = await fetchWindowsZipSha256(version);
+    console.log(`  SHA256: ${sha256}`);
+
+    // Update manifests
+    console.log("Updating Scoop manifest...");
+    await updateScoopManifest(version, sha256);
+
+    console.log("Updating Winget manifest...");
+    await updateWingetManifest(version, sha256);
+
+    // Commit and push manifest updates
+    await $`git add ${SCOOP_MANIFEST_PATH} ${WINGET_MANIFEST_PATH}`;
+    await $`git commit -m ${`chore: Update Windows manifests for v${version}`}`;
+    await $`git push`;
+
+    console.log("Windows manifests updated");
 }
 
 async function getLastTag(): Promise<string | null> {
@@ -360,6 +470,9 @@ async function release() {
     const sha256 = await fetchSha256(newVersion);
     await updateHomebrewTap(newVersion, sha256);
     console.log("Homebrew tap updated");
+
+    // Update Windows manifests
+    await updateWindowsManifests(newVersion);
 }
 
 release().catch((err) => {

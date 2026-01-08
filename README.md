@@ -19,7 +19,7 @@ Or in a single command:
 brew install tolgamorf/tap/env2op-cli
 ```
 
-### Package Managers (All Operating Systems)
+### Package Managers (macOS/Linux/Windows)
 
 #### Global installation
 

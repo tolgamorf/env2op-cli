@@ -204,12 +204,17 @@ function buildReleaseNotes(commits: Commit[]): string {
 brew install tolgamorf/tap/env2op-cli
 \`\`\`
 
-### npm / bun
+### Package Managers (macOS/Linux/Windows)
 
 \`\`\`bash
+# Using bun
 bun add -g @tolgamorf/env2op-cli
-# or
+
+# Using npm
 npm install -g @tolgamorf/env2op-cli
+
+# Using pnpm
+pnpm add -g @tolgamorf/env2op-cli
 \`\`\``;
     noteSections.push(installInstructions);
 

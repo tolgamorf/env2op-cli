@@ -2,7 +2,7 @@
 
 Push `.env` files to 1Password and pull them back with two simple commands.
 
-![env2op demo](demo/env2op-demo.gif)
+![env2op demo](./demo/env2op-demo.gif)
 
 ## Installation
 
@@ -58,7 +58,7 @@ pnpm dlx @tolgamorf/env2op-cli .env Personal "MyApp"
 This package provides two commands:
 
 | Command  | Description                                            |
-|----------|--------------------------------------------------------|
+|:--------:|--------------------------------------------------------|
 | `env2op` | Push `.env` to 1Password, generate `.env.tpl` template |
 | `op2env` | Pull secrets from 1Password using `.env.tpl` template  |
 
@@ -92,7 +92,7 @@ env2op .env.production Personal "MyApp" -f
 ### Options for env2op
 
 | Flag            | Description                                           |
-|-----------------|-------------------------------------------------------|
+|----------------:|-------------------------------------------------------|
 | `-o, --output`  | Output template path (default: `<env_file>.tpl`)      |
 | `-f, --force`   | Skip confirmation prompts                             |
 | `--dry-run`     | Preview actions without executing                     |
@@ -129,7 +129,7 @@ op2env .env.tpl -f
 ### Options for op2env
 
 | Flag            | Description                                         |
-|-----------------|-----------------------------------------------------|
+|----------------:|-----------------------------------------------------|
 | `-o, --output`  | Output .env path (default: template without `.tpl`) |
 | `-f, --force`   | Overwrite without prompting                         |
 | `--dry-run`     | Preview actions without executing                   |

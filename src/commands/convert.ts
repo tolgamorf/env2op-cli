@@ -13,6 +13,7 @@ import {
 } from "../core/onepassword";
 import { generateTemplateContent, generateUsageInstructions, writeTemplate } from "../core/template-generator";
 import type { ConvertOptions, CreateItemResult } from "../core/types";
+import { getCliVersion } from "../lib/update";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { withMinTime } from "../utils/timing";
@@ -24,8 +25,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
     const { envFile, vault, itemName, output, dryRun, secret, force, verbose } = options;
 
     // Display intro
-    const pkg = await import("../../package.json");
-    logger.intro("env2op", pkg.version, dryRun);
+    logger.intro("env2op", getCliVersion(), dryRun);
 
     try {
         // Step 1: Parse .env file

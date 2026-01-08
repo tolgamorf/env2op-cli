@@ -1,10 +1,9 @@
 import pc from "picocolors";
 import { runInject } from "./commands/inject";
 import { runUpdate } from "./commands/update";
-import { checkForUpdate } from "./lib/update";
+import { checkForUpdate, getCliVersion } from "./lib/update";
 import { showUpdateNotification } from "./lib/update-prompts";
 
-const pkg = await import("../package.json");
 const args = process.argv.slice(2);
 
 // Parse arguments
@@ -38,7 +37,7 @@ const hasVersion = flags.has("v") || flags.has("version");
 const hasUpdate = flags.has("update");
 
 if (hasVersion) {
-    console.log(pkg.version);
+    console.log(getCliVersion());
     process.exit(0);
 }
 
@@ -78,7 +77,7 @@ try {
 
 function showHelp(): void {
     const name = pc.bold(pc.cyan("op2env"));
-    const version = pc.dim(`v${pkg.version}`);
+    const version = pc.dim(`v${getCliVersion()}`);
 
     console.log(`
 ${name} ${version}

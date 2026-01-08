@@ -5,6 +5,7 @@ import { stripHeaders } from "../core/env-parser";
 import { checkOpCli, checkSignedIn, signIn } from "../core/onepassword";
 import { generateEnvHeader } from "../core/template-generator";
 import type { InjectOptions } from "../core/types";
+import { getCliVersion } from "../lib/update";
 import { Env2OpError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { exec } from "../utils/shell";
@@ -31,8 +32,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
     const outputPath = output ?? deriveOutputPath(templateFile);
 
     // Display intro
-    const pkg = await import("../../package.json");
-    logger.intro("op2env", pkg.version, dryRun);
+    logger.intro("op2env", getCliVersion(), dryRun);
 
     try {
         // Step 1: Check template file exists

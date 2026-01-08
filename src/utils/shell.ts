@@ -1,3 +1,4 @@
+import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
 import pc from "picocolors";
 
@@ -19,21 +20,10 @@ function quoteArg(arg: string): string {
 }
 
 /**
- * Execute a shell command and return the result
+ * Collect stdout/stderr from a child process and resolve when complete
  */
-export async function exec(command: string, args: string[] = [], options: ExecOptions = {}): Promise<ExecResult> {
-    const { verbose = false } = options;
-    const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
-
-    if (verbose) {
-        console.log(pc.dim(`$ ${fullCommand}`));
-    }
-
+function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult> {
     return new Promise((resolve) => {
-        const proc = spawn(command, args, {
-            stdio: ["ignore", "pipe", "pipe"],
-        });
-
         const stdoutChunks: string[] = [];
         const stderrChunks: string[] = [];
 
@@ -70,6 +60,24 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
             });
         });
     });
+}
+
+/**
+ * Execute a shell command and return the result
+ */
+export async function exec(command: string, args: string[] = [], options: ExecOptions = {}): Promise<ExecResult> {
+    const { verbose = false } = options;
+    const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
+
+    if (verbose) {
+        console.log(pc.dim(`$ ${fullCommand}`));
+    }
+
+    const proc = spawn(command, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    return collectOutput(proc, verbose);
 }
 
 /**
@@ -116,44 +124,12 @@ export async function execWithStdin(
         console.log(pc.dim(`$ echo '...' | ${fullCommand}`));
     }
 
-    return new Promise((resolve) => {
-        const proc = spawn(command, args, {
-            stdio: ["pipe", "pipe", "pipe"],
-        });
-
-        const stdoutChunks: string[] = [];
-        const stderrChunks: string[] = [];
-
-        proc.stdin?.write(stdinContent);
-        proc.stdin?.end();
-
-        proc.stdout?.on("data", (data: Buffer | string) => {
-            const text = Buffer.isBuffer(data) ? data.toString() : String(data);
-            stdoutChunks.push(text);
-            if (verbose) process.stdout.write(text);
-        });
-
-        proc.stderr?.on("data", (data: Buffer | string) => {
-            const text = Buffer.isBuffer(data) ? data.toString() : String(data);
-            stderrChunks.push(text);
-            if (verbose) process.stderr.write(text);
-        });
-
-        proc.on("close", (code) => {
-            resolve({
-                stdout: stdoutChunks.join(""),
-                stderr: stderrChunks.join(""),
-                exitCode: code ?? 1,
-            });
-        });
-
-        proc.on("error", (err) => {
-            stderrChunks.push(err.message);
-            resolve({
-                stdout: stdoutChunks.join(""),
-                stderr: stderrChunks.join(""),
-                exitCode: 1,
-            });
-        });
+    const proc = spawn(command, args, {
+        stdio: ["pipe", "pipe", "pipe"],
     });
+
+    proc.stdin?.write(stdinContent);
+    proc.stdin?.end();
+
+    return collectOutput(proc, verbose);
 }

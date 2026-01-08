@@ -65,6 +65,13 @@ export const errors = {
             'Run "op signin" to authenticate',
         ),
 
+    opSigninFailed: (): Env2OpError =>
+        new Env2OpError(
+            "Failed to sign in to 1Password CLI",
+            ErrorCodes.OP_SIGNIN_FAILED,
+            'Try running "op signin" manually',
+        ),
+
     vaultNotFound: (vault: string): Env2OpError =>
         new Env2OpError(
             `Vault not found: ${vault}`,
@@ -90,4 +97,14 @@ export const errors = {
 
     parseError: (line: number, message: string): Env2OpError =>
         new Env2OpError(`Parse error at line ${line}: ${message}`, ErrorCodes.PARSE_ERROR),
+
+    templateNotFound: (path: string): Env2OpError =>
+        new Env2OpError(
+            `Template file not found: ${path}`,
+            ErrorCodes.TEMPLATE_NOT_FOUND,
+            "Ensure the file exists and the path is correct",
+        ),
+
+    injectFailed: (message: string): Env2OpError =>
+        new Env2OpError("Failed to pull secrets from 1Password", ErrorCodes.INJECT_FAILED, message),
 };

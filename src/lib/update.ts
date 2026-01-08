@@ -213,3 +213,21 @@ export function clearUpdateCache(): void {
         // Ignore errors
     }
 }
+
+/**
+ * Check for updates and show notification if available (non-blocking)
+ * Silently ignores any errors
+ */
+export async function maybeShowUpdateNotification(
+    cliName: string,
+    showNotification: (result: UpdateCheckResult, cliName: string) => void,
+): Promise<void> {
+    try {
+        const result = await checkForUpdate();
+        if (result.updateAvailable && !result.isSkipped) {
+            showNotification(result, cliName);
+        }
+    } catch {
+        // Silently ignore update check errors
+    }
+}

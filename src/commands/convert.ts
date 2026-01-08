@@ -1,21 +1,14 @@
 import { basename, dirname, join } from "node:path";
 import * as p from "@clack/prompts";
+import { ensureOpAuthenticated } from "../core/auth";
 import { parseEnvFile, validateParseResult } from "../core/env-parser";
-import {
-    checkOpCli,
-    checkSignedIn,
-    createSecureNote,
-    createVault,
-    editSecureNote,
-    itemExists,
-    signIn,
-    vaultExists,
-} from "../core/onepassword";
+import { createSecureNote, createVault, editSecureNote, itemExists, vaultExists } from "../core/onepassword";
 import { generateTemplateContent, generateUsageInstructions, writeTemplate } from "../core/template-generator";
 import type { ConvertOptions, CreateItemResult } from "../core/types";
 import { getCliVersion } from "../lib/update";
-import { Env2OpError } from "../utils/errors";
+import { handleCommandError } from "../utils/error-handler";
 import { logger } from "../utils/logger";
+import { confirmOrExit } from "../utils/prompts";
 import { withMinTime } from "../utils/timing";
 
 /**
@@ -62,47 +55,8 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.keyValue("Type", secret ? "password (hidden)" : "text (visible)");
             logger.keyValue("Fields", logger.formatFields(variables.map((v) => v.key)));
         } else {
-            // Check 1Password CLI before attempting
-            const authSpinner = p.spinner();
-            authSpinner.start("Checking 1Password CLI...");
-
-            const opInstalled = await checkOpCli({ verbose });
-            if (!opInstalled) {
-                authSpinner.stop("1Password CLI not found");
-                throw new Env2OpError(
-                    "1Password CLI (op) is not installed",
-                    "OP_CLI_NOT_INSTALLED",
-                    "Install from https://1password.com/downloads/command-line/",
-                );
-            }
-
-            let signedIn = await checkSignedIn({ verbose });
-            if (!signedIn) {
-                authSpinner.message("Signing in to 1Password...");
-
-                const signInSuccess = await signIn({ verbose });
-                if (!signInSuccess) {
-                    authSpinner.stop();
-                    throw new Env2OpError(
-                        "Failed to sign in to 1Password CLI",
-                        "OP_SIGNIN_FAILED",
-                        'Try running "op signin" manually',
-                    );
-                }
-
-                // Verify sign-in was successful
-                signedIn = await checkSignedIn({ verbose });
-                if (!signedIn) {
-                    authSpinner.stop();
-                    throw new Env2OpError(
-                        "Not signed in to 1Password CLI",
-                        "OP_NOT_SIGNED_IN",
-                        'Run "op signin" to authenticate',
-                    );
-                }
-            }
-
-            authSpinner.stop("1Password CLI ready");
+            // Check 1Password CLI and authenticate
+            await ensureOpAuthenticated({ verbose });
 
             // Check if vault exists
             const vaultSpinner = p.spinner();
@@ -148,14 +102,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
 
                 // Item exists - update it in place (preserves UUID, avoids trash)
                 if (!force) {
-                    const shouldOverwrite = await p.confirm({
-                        message: `Item "${itemName}" already exists in vault "${vault}". Update it?`,
-                    });
-
-                    if (p.isCancel(shouldOverwrite) || !shouldOverwrite) {
-                        logger.cancel("Operation cancelled");
-                        process.exit(0);
-                    }
+                    await confirmOrExit(`Item "${itemName}" already exists in vault "${vault}". Update it?`);
                 }
             } else {
                 itemSpinner.stop(`Item "${itemName}" not found`);
@@ -226,13 +173,6 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.outro("Done! Your secrets are now in 1Password");
         }
     } catch (error) {
-        if (error instanceof Env2OpError) {
-            logger.error(error.message);
-            if (error.suggestion) {
-                logger.info(`Suggestion: ${error.suggestion}`);
-            }
-            process.exit(1);
-        }
-        throw error;
+        handleCommandError(error);
     }
 }

@@ -1,36 +1,12 @@
 import pc from "picocolors";
 import { runConvert } from "./commands/convert";
 import { runUpdate } from "./commands/update";
-import { checkForUpdate, getCliVersion } from "./lib/update";
+import { getCliVersion, maybeShowUpdateNotification } from "./lib/update";
 import { showUpdateNotification } from "./lib/update-prompts";
+import { parseArgs } from "./utils/args";
 
 const pkg = await import("../package.json");
-const args = process.argv.slice(2);
-
-// Parse arguments
-const flags = new Set<string>();
-const positional: string[] = [];
-const options: Record<string, string> = {};
-
-for (let i = 0; i < args.length; i++) {
-    const arg = args[i] as string;
-    if (arg === "-o" || arg === "--output") {
-        const next = args[i + 1];
-        if (next && !next.startsWith("-")) {
-            options.output = next;
-            i++; // skip next arg
-        }
-    } else if (arg.startsWith("--")) {
-        flags.add(arg.slice(2));
-    } else if (arg.startsWith("-")) {
-        // Handle short flags
-        for (const char of arg.slice(1)) {
-            flags.add(char);
-        }
-    } else {
-        positional.push(arg);
-    }
-}
+const { flags, positional, options } = parseArgs(process.argv.slice(2));
 
 // Check for flags
 const hasHelp = flags.has("h") || flags.has("help");
@@ -75,14 +51,7 @@ await runConvert({
 });
 
 // Check for updates after command execution (non-blocking)
-try {
-    const updateResult = await checkForUpdate();
-    if (updateResult.updateAvailable && !updateResult.isSkipped) {
-        showUpdateNotification(updateResult, "env2op");
-    }
-} catch {
-    // Silently ignore update check errors
-}
+await maybeShowUpdateNotification("env2op", showUpdateNotification);
 
 function showHelp(): void {
     const name = pc.bold(pc.cyan("env2op"));

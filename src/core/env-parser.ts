@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { errors } from "../utils/errors";
+import { HEADER_SEPARATOR } from "./constants";
 import type { EnvLine, EnvVariable, ParseResult } from "./types";
-
-const HEADER_SEPARATOR = "# ===========================================================================";
 
 /**
  * Strip env2op/op2env header blocks from content

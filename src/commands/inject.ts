@@ -1,13 +1,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
-import * as p from "@clack/prompts";
+import { ensureOpAuthenticated } from "../core/auth";
 import { stripHeaders } from "../core/env-parser";
-import { checkOpCli, checkSignedIn, signIn } from "../core/onepassword";
 import { generateEnvHeader } from "../core/template-generator";
 import type { InjectOptions } from "../core/types";
 import { getCliVersion } from "../lib/update";
-import { Env2OpError } from "../utils/errors";
+import { handleCommandError } from "../utils/error-handler";
+import { errors } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { confirmOrExit } from "../utils/prompts";
 import { exec } from "../utils/shell";
 import { withMinTime } from "../utils/timing";
 
@@ -37,57 +38,14 @@ export async function runInject(options: InjectOptions): Promise<void> {
     try {
         // Step 1: Check template file exists
         if (!existsSync(templateFile)) {
-            throw new Env2OpError(
-                `Template file not found: ${templateFile}`,
-                "TEMPLATE_NOT_FOUND",
-                "Ensure the file exists and the path is correct",
-            );
+            throw errors.templateNotFound(templateFile);
         }
 
         logger.success(`Found template: ${basename(templateFile)}`);
 
         // Step 2: Check 1Password CLI
         if (!dryRun) {
-            const authSpinner = p.spinner();
-            authSpinner.start("Checking 1Password CLI...");
-
-            const opInstalled = await checkOpCli({ verbose });
-            if (!opInstalled) {
-                authSpinner.stop("1Password CLI not found");
-                throw new Env2OpError(
-                    "1Password CLI (op) is not installed",
-                    "OP_CLI_NOT_INSTALLED",
-                    "Install from https://1password.com/downloads/command-line/",
-                );
-            }
-
-            let signedIn = await checkSignedIn({ verbose });
-            if (!signedIn) {
-                authSpinner.message("Signing in to 1Password...");
-
-                const signInSuccess = await signIn({ verbose });
-                if (!signInSuccess) {
-                    authSpinner.stop();
-                    throw new Env2OpError(
-                        "Failed to sign in to 1Password CLI",
-                        "OP_SIGNIN_FAILED",
-                        'Try running "op signin" manually',
-                    );
-                }
-
-                // Verify sign-in was successful
-                signedIn = await checkSignedIn({ verbose });
-                if (!signedIn) {
-                    authSpinner.stop();
-                    throw new Env2OpError(
-                        "Not signed in to 1Password CLI",
-                        "OP_NOT_SIGNED_IN",
-                        'Run "op signin" to authenticate',
-                    );
-                }
-            }
-
-            authSpinner.stop("1Password CLI ready");
+            await ensureOpAuthenticated({ verbose });
         }
 
         // Step 3: Check if output file exists
@@ -104,14 +62,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
         }
 
         if (outputExists && !force) {
-            const shouldOverwrite = await p.confirm({
-                message: `File "${outputPath}" already exists. Overwrite?`,
-            });
-
-            if (p.isCancel(shouldOverwrite) || !shouldOverwrite) {
-                logger.cancel("Operation cancelled");
-                process.exit(0);
-            }
+            await confirmOrExit(`File "${outputPath}" already exists. Overwrite?`);
         }
 
         // Step 4: Run op inject
@@ -150,18 +101,11 @@ export async function runInject(options: InjectOptions): Promise<void> {
             // Extract stderr from error
             const stderr = (error as { stderr?: string })?.stderr;
             const message = stderr || (error instanceof Error ? error.message : String(error));
-            throw new Env2OpError("Failed to pull secrets from 1Password", "INJECT_FAILED", message);
+            throw errors.injectFailed(message);
         }
 
         logger.outro("Done! Your .env file is ready");
     } catch (error) {
-        if (error instanceof Env2OpError) {
-            logger.error(error.message);
-            if (error.suggestion) {
-                logger.info(`Suggestion: ${error.suggestion}`);
-            }
-            process.exit(1);
-        }
-        throw error;
+        handleCommandError(error);
     }
 }

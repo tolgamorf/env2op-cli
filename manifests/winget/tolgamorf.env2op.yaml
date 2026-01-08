@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.4.0.schema.json
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.10.0.schema.json
 
 PackageIdentifier: tolgamorf.env2op
 PackageVersion: 0.2.5
@@ -25,7 +25,7 @@ Installers:
   - Architecture: x64
     InstallerType: zip
     InstallerUrl: https://github.com/tolgamorf/env2op-cli/releases/download/v0.2.5/env2op-windows-x64.zip
-    InstallerSha256: a4a43120fcdac0e4a4cb5aa1ac62bfa8e01c187b28b3084900bde37130069f37
+    InstallerSha256: A4A43120FCDAC0E4A4CB5AA1AC62BFA8E01C187B28B3084900BDE37130069F37
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: env2op.exe
@@ -33,4 +33,4 @@ Installers:
       - RelativeFilePath: op2env.exe
         PortableCommandAlias: op2env
 ManifestType: singleton
-ManifestVersion: 1.4.0
+ManifestVersion: 1.10.0

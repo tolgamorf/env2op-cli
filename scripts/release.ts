@@ -137,8 +137,8 @@ async function updateWingetManifest(version: string, sha256: string): Promise<vo
         `InstallerUrl: https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`,
     );
 
-    // Update SHA256
-    content = content.replace(/InstallerSha256: .+$/m, `InstallerSha256: ${sha256}`);
+    // Update SHA256 (uppercase for Winget convention)
+    content = content.replace(/InstallerSha256: .+$/m, `InstallerSha256: ${sha256.toUpperCase()}`);
 
     await Bun.write(WINGET_MANIFEST_PATH, content);
 }

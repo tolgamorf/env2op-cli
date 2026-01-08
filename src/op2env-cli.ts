@@ -28,6 +28,7 @@ if (hasUpdate) {
 
 if (hasHelp || positional.length === 0) {
     showHelp();
+    await maybeShowUpdateNotification("op2env", showUpdateNotification);
     process.exit(0);
 }
 

@@ -10,6 +10,7 @@ import type { UpdateCheckResult } from "./update";
 export type UpdateChoice = "update" | "skip" | "later";
 
 // Unicode box drawing characters
+const S_BAR = "\u2502";
 const S_BAR_START = "\u250C";
 const S_BAR_END = "\u2514";
 
@@ -22,7 +23,7 @@ export function showUpdateNotification(result: UpdateCheckResult, cliName = "env
     console.log(
         `${pc.gray(S_BAR_START)}${pc.gray("\u2500")} ${pc.yellow("Update available:")} ${pc.dim(result.currentVersion)} ${pc.dim("\u2192")} ${pc.green(result.latestVersion)}`,
     );
-    console.log(`${pc.gray(S_BAR_END)}${pc.gray("\u2500")} Run ${pc.cyan(`'${cliName} update'`)} to update`);
+    console.log(`${pc.gray(S_BAR_END)}${pc.gray("\u2500")} Run ${pc.cyan(`'${cliName} --update'`)} to update`);
 }
 
 /**
@@ -65,10 +66,9 @@ export function showUpToDate(currentVersion: string): void {
  * Show package manager detection info
  */
 export function showPackageManagerInfo(pm: PackageManagerInfo): void {
-    console.log();
-    console.log(`  ${pc.dim("Detected:")} ${pm.displayName} installation`);
-    console.log(`  ${pc.dim("Command:")}  ${pc.cyan(pm.updateCommand)}`);
-    console.log();
+    console.log(pc.gray(S_BAR));
+    console.log(`${pc.gray(S_BAR)}  ${pc.dim("Detected:")} ${pm.displayName} installation`);
+    console.log(`${pc.gray(S_BAR)}  ${pc.dim("Command:")}  ${pc.cyan(pm.updateCommand)}`);
 }
 
 /**

@@ -29,11 +29,13 @@ if (hasUpdate) {
 
 if (hasHelp || positional.length === 0) {
     showHelp();
+    await maybeShowUpdateNotification("env2op", showUpdateNotification);
     process.exit(0);
 }
 
 if (positional.length < 3) {
     showMissingArgsError(positional);
+    await maybeShowUpdateNotification("env2op", showUpdateNotification);
     process.exit(1);
 }
 

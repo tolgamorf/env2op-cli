@@ -21,7 +21,7 @@
 [![CI](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml)
 [![GitHub issues](https://img.shields.io/github/issues/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/tolgamorf/env2op-cli/pulls)
-[![GitHub License](https://img.shields.io/github/license/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli?tab=MIT-1-ov-file)
+[![GitHub License](https://img.shields.io/github/license/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE)
 
 <!--
 [![Socket Badge](https://socket.dev/api/badge/npm/package/@tolgamorf/env2op-cli)](https://socket.dev/npm/package/@tolgamorf/env2op-cli)

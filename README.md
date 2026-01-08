@@ -97,8 +97,10 @@ env2op .env.production Personal "MyApp" -f
 | `-f, --force`   | Skip confirmation prompts                             |
 | `--dry-run`     | Preview actions without executing                     |
 | `--secret`      | Store all fields as 'password' type (default: 'text') |
-| `-h, --help`    | Show help                                             |
+| `--verbose`     | Show op CLI output                                    |
+| `--update`      | Check for and install updates                         |
 | `-v, --version` | Show version                                          |
+| `-h, --help`    | Show help                                             |
 
 ## op2env (Pull)
 
@@ -131,8 +133,10 @@ op2env .env.tpl -f
 | `-o, --output`  | Output .env path (default: template without `.tpl`) |
 | `-f, --force`   | Overwrite without prompting                         |
 | `--dry-run`     | Preview actions without executing                   |
-| `-h, --help`    | Show help                                           |
+| `--verbose`     | Show op CLI output                                  |
+| `--update`      | Check for and install updates                       |
 | `-v, --version` | Show version                                        |
+| `-h, --help`    | Show help                                           |
 
 ## How It Works
 

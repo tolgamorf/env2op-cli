@@ -1,5 +1,8 @@
 import pc from "picocolors";
 import { runInject } from "./commands/inject";
+import { runUpdate } from "./commands/update";
+import { checkForUpdate } from "./lib/update";
+import { showUpdateNotification } from "./lib/update-prompts";
 
 const pkg = await import("../package.json");
 const args = process.argv.slice(2);
@@ -29,12 +32,22 @@ for (let i = 0; i < args.length; i++) {
     }
 }
 
-// Check for help/version flags first
+// Check for flags
 const hasHelp = flags.has("h") || flags.has("help");
 const hasVersion = flags.has("v") || flags.has("version");
+const hasUpdate = flags.has("update");
 
 if (hasVersion) {
     console.log(pkg.version);
+    process.exit(0);
+}
+
+if (hasUpdate) {
+    await runUpdate({
+        force: flags.has("f") || flags.has("force"),
+        verbose: flags.has("verbose"),
+        cliName: "op2env",
+    });
     process.exit(0);
 }
 
@@ -53,6 +66,16 @@ await runInject({
     verbose: flags.has("verbose"),
 });
 
+// Check for updates after command execution (non-blocking)
+try {
+    const updateResult = await checkForUpdate();
+    if (updateResult.updateAvailable && !updateResult.isSkipped) {
+        showUpdateNotification(updateResult, "op2env");
+    }
+} catch {
+    // Silently ignore update check errors
+}
+
 function showHelp(): void {
     const name = pc.bold(pc.cyan("op2env"));
     const version = pc.dim(`v${pkg.version}`);
@@ -65,15 +88,16 @@ ${pc.bold("USAGE")}
   ${pc.cyan("$")} op2env ${pc.yellow("<template_file>")} ${pc.dim("[options]")}
 
 ${pc.bold("ARGUMENTS")}
-  ${pc.yellow("template_file")}  Path to .env.tpl template file
+  ${pc.yellow("template_file")}   Path to .env.tpl template file
 
 ${pc.bold("OPTIONS")}
-  ${pc.cyan("-o, --output")}   Output .env path (default: template without .tpl)
-  ${pc.cyan("-f, --force")}    Overwrite without prompting
-  ${pc.cyan("--dry-run")}      Preview actions without executing
-  ${pc.cyan("--verbose")}      Show op CLI output
-  ${pc.cyan("-h, --help")}     Show this help message
-  ${pc.cyan("-v, --version")}  Show version
+  ${pc.cyan("-o, --output")}    Output .env path (default: template without .tpl)
+  ${pc.cyan("-f, --force")}     Overwrite without prompting
+  ${pc.cyan("    --dry-run")}   Preview actions without executing
+  ${pc.cyan("    --verbose")}   Show op CLI output
+  ${pc.cyan("    --update")}    Check for and install updates
+  ${pc.cyan("-v, --version")}   Show version
+  ${pc.cyan("-h, --help")}      Show this help message
 
 ${pc.bold("EXAMPLES")}
   ${pc.dim("# Basic usage - generates .env from .env.tpl")}

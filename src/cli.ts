@@ -1,5 +1,8 @@
 import pc from "picocolors";
 import { runConvert } from "./commands/convert";
+import { runUpdate } from "./commands/update";
+import { checkForUpdate } from "./lib/update";
+import { showUpdateNotification } from "./lib/update-prompts";
 
 const pkg = await import("../package.json");
 const args = process.argv.slice(2);
@@ -29,12 +32,22 @@ for (let i = 0; i < args.length; i++) {
     }
 }
 
-// Check for help/version flags first
+// Check for flags
 const hasHelp = flags.has("h") || flags.has("help");
 const hasVersion = flags.has("v") || flags.has("version");
+const hasUpdate = flags.has("update");
 
 if (hasVersion) {
     console.log(pkg.version);
+    process.exit(0);
+}
+
+if (hasUpdate) {
+    await runUpdate({
+        force: flags.has("f") || flags.has("force"),
+        verbose: flags.has("verbose"),
+        cliName: "env2op",
+    });
     process.exit(0);
 }
 
@@ -61,6 +74,16 @@ await runConvert({
     verbose: flags.has("verbose"),
 });
 
+// Check for updates after command execution (non-blocking)
+try {
+    const updateResult = await checkForUpdate();
+    if (updateResult.updateAvailable && !updateResult.isSkipped) {
+        showUpdateNotification(updateResult, "env2op");
+    }
+} catch {
+    // Silently ignore update check errors
+}
+
 function showHelp(): void {
     const name = pc.bold(pc.cyan("env2op"));
     const version = pc.dim(`v${pkg.version}`);
@@ -73,18 +96,19 @@ ${pc.bold("USAGE")}
   ${pc.cyan("$")} env2op ${pc.yellow("<env_file>")} ${pc.yellow("<vault>")} ${pc.yellow("<item_name>")} ${pc.dim("[options]")}
 
 ${pc.bold("ARGUMENTS")}
-  ${pc.yellow("env_file")}     Path to .env file
-  ${pc.yellow("vault")}        1Password vault name
-  ${pc.yellow("item_name")}    Name for the Secure Note in 1Password
+  ${pc.yellow("env_file")}        Path to .env file
+  ${pc.yellow("vault")}           1Password vault name
+  ${pc.yellow("item_name")}       Name for the Secure Note in 1Password
 
 ${pc.bold("OPTIONS")}
-  ${pc.cyan("-o, --output")}   Output template path (default: <env_file>.tpl)
-  ${pc.cyan("-f, --force")}    Skip confirmation prompts
-  ${pc.cyan("--dry-run")}      Preview actions without executing
-  ${pc.cyan("--secret")}       Store all fields as password type (hidden)
-  ${pc.cyan("--verbose")}      Show op CLI output
-  ${pc.cyan("-h, --help")}     Show this help message
-  ${pc.cyan("-v, --version")}  Show version
+  ${pc.cyan("-o, --output")}    Output template path (default: <env_file>.tpl)
+  ${pc.cyan("-f, --force")}     Skip confirmation prompts
+  ${pc.cyan("    --dry-run")}   Preview actions without executing
+  ${pc.cyan("    --secret")}    Store all fields as password type (hidden)
+  ${pc.cyan("    --verbose")}   Show op CLI output
+  ${pc.cyan("    --update")}    Check for and install updates
+  ${pc.cyan("-v, --version")}   Show version
+  ${pc.cyan("-h, --help")}      Show this help message
 
 ${pc.bold("EXAMPLES")}
   ${pc.dim("# Basic usage")}

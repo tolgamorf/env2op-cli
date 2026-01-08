@@ -1,27 +1,24 @@
 {
-    "version": "0.2.5",
-    "description": "Push .env files to 1Password and pull them back",
-    "homepage": "https://github.com/tolgamorf/env2op-cli",
-    "license": "MIT",
-    "architecture": {
-        "64bit": {
-            "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v0.2.5/env2op-windows-x64.zip",
-            "hash": "a4a43120fcdac0e4a4cb5aa1ac62bfa8e01c187b28b3084900bde37130069f37"
-        }
-    },
-    "bin": [
-        "env2op.exe",
-        "op2env.exe"
-    ],
-    "checkver": "github",
-    "autoupdate": {
-        "architecture": {
-            "64bit": {
-                "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v$version/env2op-windows-x64.zip"
-            }
-        },
-        "hash": {
-            "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v$version/SHASUMS256.txt"
-        }
+  "version": "0.2.5",
+  "description": "Push .env files to 1Password and pull them back",
+  "homepage": "https://github.com/tolgamorf/env2op-cli",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v0.2.5/env2op-windows-x64.zip",
+      "hash": "a4a43120fcdac0e4a4cb5aa1ac62bfa8e01c187b28b3084900bde37130069f37"
     }
+  },
+  "bin": ["env2op.exe", "op2env.exe"],
+  "checkver": "github",
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v$version/env2op-windows-x64.zip"
+      }
+    },
+    "hash": {
+      "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v$version/SHASUMS256.txt"
+    }
+  }
 }

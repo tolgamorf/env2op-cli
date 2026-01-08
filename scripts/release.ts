@@ -122,7 +122,7 @@ async function updateScoopManifest(version: string, sha256: string): Promise<voi
         `https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`;
     manifest.architecture["64bit"].hash = sha256;
 
-    await Bun.write(SCOOP_MANIFEST_PATH, `${JSON.stringify(manifest, null, 4)}\n`);
+    await Bun.write(SCOOP_MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 async function updateWingetManifest(version: string, sha256: string): Promise<void> {

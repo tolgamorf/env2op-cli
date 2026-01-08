@@ -5,7 +5,7 @@ import { $ } from "bun";
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
 const SCOOP_BUCKET_PATH = "./scoop-bucket";
 const SCOOP_MANIFEST_PATH = "./manifests/scoop/env2op-cli.json";
-const WINGET_MANIFEST_PATH = "./manifests/winget/tolgamorf.env2op-cli.yaml";
+const WINGET_MANIFEST_PATH = "./manifests/winget/tolgamorf.env2op.yaml";
 
 function generateFormula(version: string, sha256: string, versioned: boolean): string {
     const className = versioned ? `Env2opCliAT${version.replace(/\./g, "")}` : "Env2opCli";

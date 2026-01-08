@@ -18,8 +18,8 @@ const UPDATE_COMMANDS: Record<PackageManager, string> = {
     npm: "npm update -g @tolgamorf/env2op-cli",
     bun: "bun update -g @tolgamorf/env2op-cli",
     pnpm: "pnpm update -g @tolgamorf/env2op-cli",
-    scoop: "scoop update env2op",
-    winget: "winget upgrade tolgamorf.env2op",
+    scoop: "scoop update env2op-cli",
+    winget: "winget upgrade tolgamorf.env2op-cli",
     unknown: "npm update -g @tolgamorf/env2op-cli",
 };
 

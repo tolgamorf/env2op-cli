@@ -49,16 +49,16 @@ brew install tolgamorf/tap/env2op-cli
 
 ```powershell
 # Add the bucket
-scoop bucket add env2op https://github.com/tolgamorf/scoop-bucket
+scoop bucket add env2op-cli https://github.com/tolgamorf/scoop-bucket
 
 # Install
-scoop install env2op
+scoop install env2op-cli
 ```
 
 #### Winget
 
 ```powershell
-winget install tolgamorf.env2op
+winget install tolgamorf.env2op-cli
 ```
 -->
 

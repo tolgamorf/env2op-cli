@@ -2,6 +2,18 @@
 
 ### Push `.env` files to [1Password](https://1password.com) and pull them back with two simple commands.
 
+
+[![NPM version](https://img.shields.io/npm/v/@tolgamorf/env2op-cli?logo=npm)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
+[![Homebrew Formula Version](https://img.shields.io/github/v/release/tolgamorf/env2op-cli?logo=homebrew&label=homebrew&color=FBB040)](https://github.com/tolgamorf/homebrew-tap)
+[![Scoop Version](https://img.shields.io/scoop/v/env2op-cli?bucket=tolgamorf&logo=windows&logoColor=white)](https://github.com/tolgamorf/scoop-bucket)
+[![WinGet Version](https://img.shields.io/badge/winget-tolgamorf.env2op--cli-0078D4?logo=windows&logoColor=white)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
+
+<!--
+[![WinGet Package Version](https://img.shields.io/winget/v/tolgamorf.env2op-cli)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
+-->
+
+![env2op demo](./demo/env2op-demo.gif)
+
 ![GitHub Release Date](https://img.shields.io/github/release-date/tolgamorf/env2op-cli)
 [![npm downloads](https://img.shields.io/npm/dm/@tolgamorf/env2op-cli)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
 [![install size](https://packagephobia.com/badge?p=@tolgamorf/env2op-cli@0.2.2)](https://packagephobia.com/result?p=@tolgamorf/env2op-cli@0.2.2)
@@ -13,21 +25,17 @@
 [![ESM](https://img.shields.io/badge/ESM-only-F7DF1E?logo=javascript&logoColor=white)](https://nodejs.org/api/esm.html)
 [![Bun](https://img.shields.io/badge/Bun-compatible-fbf0df.svg?logo=bun&logoColor=white)](https://bun.sh/)
 [![Biome](https://img.shields.io/badge/Biome-linter-60A5FA?logo=biome&logoColor=white)](https://biomejs.dev/)
-[![NPM version](https://img.shields.io/npm/v/@tolgamorf/env2op-cli?logo=npm)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
-[![Homebrew Formula Version](https://img.shields.io/github/v/release/tolgamorf/env2op-cli?logo=homebrew&label=homebrew&color=FBB040)](https://github.com/tolgamorf/homebrew-tap)
-[![Scoop Version](https://img.shields.io/scoop/v/env2op-cli?bucket=tolgamorf&logo=windows&logoColor=white)](https://github.com/tolgamorf/scoop-bucket)
-[![WinGet Version](https://img.shields.io/badge/winget-tolgamorf.env2op--cli-0078D4?logo=windows&logoColor=white)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
 [![CI](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml)
 [![GitHub issues](https://img.shields.io/github/issues/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/tolgamorf/env2op-cli/pulls)
 [![GitHub License](https://img.shields.io/github/license/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE)
 
+---
+
 <!--
 [![Socket Badge](https://socket.dev/api/badge/npm/package/@tolgamorf/env2op-cli)](https://socket.dev/npm/package/@tolgamorf/env2op-cli)
 [![GitHub stars](https://img.shields.io/github/stars/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/stargazers)
 -->
-
-![env2op demo](./demo/env2op-demo.gif)
 
 ## Installation
 

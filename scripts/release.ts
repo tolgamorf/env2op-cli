@@ -5,12 +5,12 @@ import { $ } from "bun";
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
 const SCOOP_BUCKET_PATH = "./scoop-bucket";
 const SCOOP_MANIFEST_PATH = "./scoop-bucket/bucket/env2op-cli.json";
-const WINGET_PKGS_PATH = "./winget-pkgs";
-const WINGET_MANIFESTS_DIR = "./winget-pkgs/manifests/t/tolgamorf/env2op-cli";
 
-function getWingetManifestDir(version: string): string {
-    return `${WINGET_MANIFESTS_DIR}/${version}`;
-}
+// Local manifest copies (committed to repo)
+const LOCAL_MANIFESTS_DIR = "./manifests";
+const LOCAL_HOMEBREW_FORMULA = `${LOCAL_MANIFESTS_DIR}/homebrew/env2op-cli.rb`;
+const LOCAL_SCOOP_MANIFEST = `${LOCAL_MANIFESTS_DIR}/scoop/env2op-cli.json`;
+const LOCAL_WINGET_DIR = `${LOCAL_MANIFESTS_DIR}/winget`;
 
 function generateWingetVersionManifest(version: string): string {
     return `# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.10.0.schema.json
@@ -136,9 +136,9 @@ async function fetchSha256(version: string, maxRetries = 12): Promise<string> {
 
 async function updateHomebrewTap(version: string, sha256: string): Promise<void> {
     const formulaDir = `${HOMEBREW_TAP_PATH}/Formula`;
+    const mainFormula = generateFormula(version, sha256, false);
 
     // Write main formula (latest)
-    const mainFormula = generateFormula(version, sha256, false);
     await Bun.write(`${formulaDir}/env2op-cli.rb`, mainFormula);
 
     // Write versioned formula
@@ -149,6 +149,9 @@ async function updateHomebrewTap(version: string, sha256: string): Promise<void>
     await $`git -C ${HOMEBREW_TAP_PATH} add Formula/`;
     await $`git -C ${HOMEBREW_TAP_PATH} commit -m ${`v${version}`}`;
     await $`git -C ${HOMEBREW_TAP_PATH} push`;
+
+    // Copy to local manifests folder
+    await Bun.write(LOCAL_HOMEBREW_FORMULA, mainFormula);
 }
 
 async function fetchWindowsZipSha256(version: string, maxRetries = 30): Promise<string> {
@@ -190,35 +193,31 @@ async function updateScoopManifest(version: string, sha256: string): Promise<voi
         `https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`;
     manifest.architecture["64bit"].hash = sha256;
 
-    await Bun.write(SCOOP_MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+    const manifestContent = `${JSON.stringify(manifest, null, 2)}\n`;
+
+    // Write to scoop-bucket repo
+    await Bun.write(SCOOP_MANIFEST_PATH, manifestContent);
 
     // Commit and push to scoop-bucket
     await $`git -C ${SCOOP_BUCKET_PATH} add bucket/env2op-cli.json`;
     await $`git -C ${SCOOP_BUCKET_PATH} commit -m ${`v${version}`}`;
     await $`git -C ${SCOOP_BUCKET_PATH} push`;
+
+    // Copy to local manifests folder
+    await Bun.write(LOCAL_SCOOP_MANIFEST, manifestContent);
 }
 
-async function updateWingetManifest(version: string, sha256: string): Promise<void> {
-    // Find the current version folder
-    const dirs = await Array.fromAsync(new Bun.Glob("*").scan({ cwd: WINGET_MANIFESTS_DIR, onlyFiles: false }));
-    const oldVersion = dirs.find((d) => /^\d+\.\d+\.\d+$/.test(d));
-
-    // Create new version folder with multi-file manifests
-    const manifestDir = getWingetManifestDir(version);
-    await $`mkdir -p ${manifestDir}`;
-
-    // Generate and write all three manifest files
-    await Bun.write(`${manifestDir}/tolgamorf.env2op-cli.yaml`, generateWingetVersionManifest(version));
+async function updateLocalWingetManifests(version: string, sha256: string): Promise<void> {
+    // Generate and write all three manifest files to local manifests folder
+    await Bun.write(`${LOCAL_WINGET_DIR}/tolgamorf.env2op-cli.yaml`, generateWingetVersionManifest(version));
     await Bun.write(
-        `${manifestDir}/tolgamorf.env2op-cli.installer.yaml`,
+        `${LOCAL_WINGET_DIR}/tolgamorf.env2op-cli.installer.yaml`,
         generateWingetInstallerManifest(version, sha256),
     );
-    await Bun.write(`${manifestDir}/tolgamorf.env2op-cli.locale.en-US.yaml`, generateWingetLocaleManifest(version));
-
-    // Remove old version folder if different
-    if (oldVersion && oldVersion !== version) {
-        await $`rm -rf ${WINGET_MANIFESTS_DIR}/${oldVersion}`;
-    }
+    await Bun.write(
+        `${LOCAL_WINGET_DIR}/tolgamorf.env2op-cli.locale.en-US.yaml`,
+        generateWingetLocaleManifest(version),
+    );
 }
 
 async function updateWindowsManifests(version: string): Promise<void> {
@@ -254,21 +253,15 @@ async function updateWindowsManifests(version: string): Promise<void> {
     const sha256 = await fetchWindowsZipSha256(version);
     console.log(`  SHA256: ${sha256}`);
 
-    // Update Scoop bucket (writes directly to scoop-bucket repo)
+    // Update Scoop bucket (external repo + local copy)
     console.log("Updating Scoop bucket...");
     await updateScoopManifest(version, sha256);
     console.log("Scoop bucket updated");
 
-    // Update Winget manifest
-    console.log("Updating Winget manifest...");
-    await updateWingetManifest(version, sha256);
-
-    // Commit and push to winget-pkgs repo
-    await $`git -C ${WINGET_PKGS_PATH} add -A`;
-    await $`git -C ${WINGET_PKGS_PATH} commit -m ${`v${version}`}`;
-    await $`git -C ${WINGET_PKGS_PATH} push`;
-
-    console.log("Winget manifest updated");
+    // Update local Winget manifests
+    console.log("Updating local Winget manifests...");
+    await updateLocalWingetManifests(version, sha256);
+    console.log("Winget manifests updated");
 }
 
 async function getLastTag(): Promise<string | null> {
@@ -545,14 +538,21 @@ async function release() {
         console.log("Warning: Could not find publish workflow run. Continuing with Homebrew update...");
     }
 
-    // Update Homebrew tap
+    // Update Homebrew tap (external repo + local copy)
     console.log("Updating Homebrew tap...");
     const sha256 = await fetchSha256(newVersion);
     await updateHomebrewTap(newVersion, sha256);
     console.log("Homebrew tap updated");
 
-    // Update Windows manifests
+    // Update Windows manifests (Scoop + local Winget)
     await updateWindowsManifests(newVersion);
+
+    // Commit and push updated local manifests
+    console.log("Committing updated manifests...");
+    await $`git add manifests/`;
+    await $`git commit -m ${`chore: update manifests for ${tag}`}`;
+    await $`git push`;
+    console.log("Manifests committed and pushed");
 }
 
 release().catch((err) => {

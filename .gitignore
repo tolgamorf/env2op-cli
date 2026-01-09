@@ -203,5 +203,8 @@ homebrew-tap
 # Scoop bucket (separate repo)
 scoop-bucket
 
+# Winget manifests (separate repo)
+winget-pkgs
+
 # Test scripts
 .test

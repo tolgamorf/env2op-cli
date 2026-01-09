@@ -5,7 +5,8 @@ import { $ } from "bun";
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
 const SCOOP_BUCKET_PATH = "./scoop-bucket";
 const SCOOP_MANIFEST_PATH = "./scoop-bucket/bucket/env2op-cli.json";
-const WINGET_MANIFESTS_DIR = "./manifests/t/tolgamorf/env2op-cli";
+const WINGET_PKGS_PATH = "./winget-pkgs";
+const WINGET_MANIFESTS_DIR = "./winget-pkgs/t/tolgamorf/env2op-cli";
 
 function getWingetManifestPath(version: string): string {
     return `${WINGET_MANIFESTS_DIR}/${version}/tolgamorf.env2op-cli.yaml`;
@@ -212,10 +213,10 @@ async function updateWindowsManifests(version: string): Promise<void> {
     console.log("Updating Winget manifest...");
     await updateWingetManifest(version, sha256);
 
-    // Commit and push Winget manifest updates
-    await $`git add ${WINGET_MANIFESTS_DIR}`;
-    await $`git commit -m ${`chore: Update Winget manifest for v${version}`}`;
-    await $`git push`;
+    // Commit and push to winget-pkgs repo
+    await $`git -C ${WINGET_PKGS_PATH} add -A`;
+    await $`git -C ${WINGET_PKGS_PATH} commit -m ${`v${version}`}`;
+    await $`git -C ${WINGET_PKGS_PATH} push`;
 
     console.log("Winget manifest updated");
 }

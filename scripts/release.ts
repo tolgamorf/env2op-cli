@@ -8,8 +8,70 @@ const SCOOP_MANIFEST_PATH = "./scoop-bucket/bucket/env2op-cli.json";
 const WINGET_PKGS_PATH = "./winget-pkgs";
 const WINGET_MANIFESTS_DIR = "./winget-pkgs/t/tolgamorf/env2op-cli";
 
-function getWingetManifestPath(version: string): string {
-    return `${WINGET_MANIFESTS_DIR}/${version}/tolgamorf.env2op-cli.yaml`;
+function getWingetManifestDir(version: string): string {
+    return `${WINGET_MANIFESTS_DIR}/${version}`;
+}
+
+function generateWingetVersionManifest(version: string): string {
+    return `# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.10.0.schema.json
+
+PackageIdentifier: tolgamorf.env2op-cli
+PackageVersion: ${version}
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.10.0
+`;
+}
+
+function generateWingetInstallerManifest(version: string, sha256: string): string {
+    const url = `https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`;
+    return `# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+
+PackageIdentifier: tolgamorf.env2op-cli
+PackageVersion: ${version}
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    InstallerUrl: ${url}
+    InstallerSha256: ${sha256.toUpperCase()}
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: env2op.exe
+        PortableCommandAlias: env2op
+      - RelativeFilePath: op2env.exe
+        PortableCommandAlias: op2env
+ManifestType: installer
+ManifestVersion: 1.10.0
+`;
+}
+
+function generateWingetLocaleManifest(version: string): string {
+    return `# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
+
+PackageIdentifier: tolgamorf.env2op-cli
+PackageVersion: ${version}
+PackageLocale: en-US
+Publisher: Tolga O.
+PublisherUrl: https://github.com/tolgamorf
+PackageName: env2op-cli
+PackageUrl: https://github.com/tolgamorf/env2op-cli
+License: MIT
+LicenseUrl: https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE
+ShortDescription: Push .env files to 1Password and pull them back
+Description: |-
+  env2op-cli provides two commands:
+  - env2op: Push .env files to 1Password as Secure Notes and generate templates
+  - op2env: Pull secrets from 1Password using templates to generate .env files
+Tags:
+  - cli
+  - env
+  - 1password
+  - secrets
+  - environment-variables
+  - dotenv
+ManifestType: defaultLocale
+ManifestVersion: 1.10.0
+`;
 }
 
 function generateFormula(version: string, sha256: string, versioned: boolean): string {
@@ -141,29 +203,17 @@ async function updateWingetManifest(version: string, sha256: string): Promise<vo
     const dirs = await Array.fromAsync(new Bun.Glob("*").scan({ cwd: WINGET_MANIFESTS_DIR, onlyFiles: false }));
     const oldVersion = dirs.find((d) => /^\d+\.\d+\.\d+$/.test(d));
 
-    // Read from old version or use template structure
-    const oldManifestPath = oldVersion
-        ? `${WINGET_MANIFESTS_DIR}/${oldVersion}/tolgamorf.env2op-cli.yaml`
-        : getWingetManifestPath(version);
+    // Create new version folder with multi-file manifests
+    const manifestDir = getWingetManifestDir(version);
+    await $`mkdir -p ${manifestDir}`;
 
-    let content = await Bun.file(oldManifestPath).text();
-
-    // Update version
-    content = content.replace(/^PackageVersion: .+$/m, `PackageVersion: ${version}`);
-
-    // Update installer URL
-    content = content.replace(
-        /InstallerUrl: .+env2op-windows-x64\.zip$/m,
-        `InstallerUrl: https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`,
+    // Generate and write all three manifest files
+    await Bun.write(`${manifestDir}/tolgamorf.env2op-cli.yaml`, generateWingetVersionManifest(version));
+    await Bun.write(
+        `${manifestDir}/tolgamorf.env2op-cli.installer.yaml`,
+        generateWingetInstallerManifest(version, sha256),
     );
-
-    // Update SHA256 (uppercase for Winget convention)
-    content = content.replace(/InstallerSha256: .+$/m, `InstallerSha256: ${sha256.toUpperCase()}`);
-
-    // Create new version folder and write manifest
-    const newManifestPath = getWingetManifestPath(version);
-    await $`mkdir -p ${WINGET_MANIFESTS_DIR}/${version}`;
-    await Bun.write(newManifestPath, content);
+    await Bun.write(`${manifestDir}/tolgamorf.env2op-cli.locale.en-US.yaml`, generateWingetLocaleManifest(version));
 
     // Remove old version folder if different
     if (oldVersion && oldVersion !== version) {

@@ -29,21 +29,94 @@ jobs:
           $sha256 = ($shasums -split '\s+')[0].ToUpper()
           echo "sha256=$sha256" >> $env:GITHUB_OUTPUT
 
+      - name: Create multi-file manifest
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $sha256 = "${{ steps.sha256.outputs.sha256 }}"
+          $url = "https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip"
+          $manifestDir = "manifests/t/tolgamorf/env2op-cli/${version}"
+
+          New-Item -ItemType Directory -Path $manifestDir -Force
+
+          # Version manifest
+          @"
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.version.1.10.0.schema.json
+
+          PackageIdentifier: tolgamorf.env2op-cli
+          PackageVersion: ${version}
+          DefaultLocale: en-US
+          ManifestType: version
+          ManifestVersion: 1.10.0
+          "@ -replace '(?m)^          ', '' | Set-Content -Path "${manifestDir}/tolgamorf.env2op-cli.yaml" -NoNewline
+
+          # Installer manifest
+          @"
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+
+          PackageIdentifier: tolgamorf.env2op-cli
+          PackageVersion: ${version}
+          Installers:
+            - Architecture: x64
+              InstallerType: zip
+              InstallerUrl: ${url}
+              InstallerSha256: ${sha256}
+              NestedInstallerType: portable
+              NestedInstallerFiles:
+                - RelativeFilePath: env2op.exe
+                  PortableCommandAlias: env2op
+                - RelativeFilePath: op2env.exe
+                  PortableCommandAlias: op2env
+          ManifestType: installer
+          ManifestVersion: 1.10.0
+          "@ -replace '(?m)^          ', '' | Set-Content -Path "${manifestDir}/tolgamorf.env2op-cli.installer.yaml" -NoNewline
+
+          # Default locale manifest
+          @"
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
+
+          PackageIdentifier: tolgamorf.env2op-cli
+          PackageVersion: ${version}
+          PackageLocale: en-US
+          Publisher: Tolga O.
+          PublisherUrl: https://github.com/tolgamorf
+          PackageName: env2op-cli
+          PackageUrl: https://github.com/tolgamorf/env2op-cli
+          License: MIT
+          LicenseUrl: https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE
+          ShortDescription: Push .env files to 1Password and pull them back
+          Description: |-
+            env2op-cli provides two commands:
+            - env2op: Push .env files to 1Password as Secure Notes and generate templates
+            - op2env: Pull secrets from 1Password using templates to generate .env files
+          Tags:
+            - cli
+            - env
+            - 1password
+            - secrets
+            - environment-variables
+            - dotenv
+          ManifestType: defaultLocale
+          ManifestVersion: 1.10.0
+          "@ -replace '(?m)^          ', '' | Set-Content -Path "${manifestDir}/tolgamorf.env2op-cli.locale.en-US.yaml" -NoNewline
+
+          Write-Host "Created manifests in ${manifestDir}:"
+          Get-ChildItem $manifestDir
+
       - name: Install wingetcreate
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
 
-      - name: Update Winget manifest
+      - name: Submit Winget manifest
         shell: pwsh
         env:
           WINGET_PAT: ${{ secrets.WINGET_PAT }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $url = "https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip"
+          $manifestDir = "manifests/t/tolgamorf/env2op-cli/${version}"
 
-          .\wingetcreate.exe update tolgamorf.env2op-cli `
-            --version $version `
-            --urls $url `
-            --submit `
-            --token $env:WINGET_PAT
+          .\wingetcreate.exe submit `
+            --prtitle "tolgamorf.env2op-cli version ${version}" `
+            --token $env:WINGET_PAT `
+            $manifestDir

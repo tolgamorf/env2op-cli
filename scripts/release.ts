@@ -5,7 +5,11 @@ import { $ } from "bun";
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
 const SCOOP_BUCKET_PATH = "./scoop-bucket";
 const SCOOP_MANIFEST_PATH = "./manifests/scoop/env2op-cli.json";
-const WINGET_MANIFEST_PATH = "./manifests/winget/tolgamorf.env2op.yaml";
+const WINGET_MANIFESTS_DIR = "./manifests/t/tolgamorf/env2op-cli";
+
+function getWingetManifestPath(version: string): string {
+    return `${WINGET_MANIFESTS_DIR}/${version}/tolgamorf.env2op-cli.yaml`;
+}
 
 function generateFormula(version: string, sha256: string, versioned: boolean): string {
     const className = versioned ? `Env2opCliAT${version.replace(/\./g, "")}` : "Env2opCli";
@@ -127,7 +131,16 @@ async function updateScoopManifest(version: string, sha256: string): Promise<voi
 }
 
 async function updateWingetManifest(version: string, sha256: string): Promise<void> {
-    let content = await Bun.file(WINGET_MANIFEST_PATH).text();
+    // Find the current version folder
+    const dirs = await Array.fromAsync(new Bun.Glob("*").scan({ cwd: WINGET_MANIFESTS_DIR, onlyFiles: false }));
+    const oldVersion = dirs.find((d) => /^\d+\.\d+\.\d+$/.test(d));
+
+    // Read from old version or use template structure
+    const oldManifestPath = oldVersion
+        ? `${WINGET_MANIFESTS_DIR}/${oldVersion}/tolgamorf.env2op-cli.yaml`
+        : getWingetManifestPath(version);
+
+    let content = await Bun.file(oldManifestPath).text();
 
     // Update version
     content = content.replace(/^PackageVersion: .+$/m, `PackageVersion: ${version}`);
@@ -141,7 +154,15 @@ async function updateWingetManifest(version: string, sha256: string): Promise<vo
     // Update SHA256 (uppercase for Winget convention)
     content = content.replace(/InstallerSha256: .+$/m, `InstallerSha256: ${sha256.toUpperCase()}`);
 
-    await Bun.write(WINGET_MANIFEST_PATH, content);
+    // Create new version folder and write manifest
+    const newManifestPath = getWingetManifestPath(version);
+    await $`mkdir -p ${WINGET_MANIFESTS_DIR}/${version}`;
+    await Bun.write(newManifestPath, content);
+
+    // Remove old version folder if different
+    if (oldVersion && oldVersion !== version) {
+        await $`rm -rf ${WINGET_MANIFESTS_DIR}/${oldVersion}`;
+    }
 }
 
 async function updateScoopBucket(version: string): Promise<void> {
@@ -197,7 +218,7 @@ async function updateWindowsManifests(version: string): Promise<void> {
     await updateWingetManifest(version, sha256);
 
     // Commit and push manifest updates
-    await $`git add ${SCOOP_MANIFEST_PATH} ${WINGET_MANIFEST_PATH}`;
+    await $`git add ${SCOOP_MANIFEST_PATH} ${WINGET_MANIFESTS_DIR}`;
     await $`git commit -m ${`chore: Update Windows manifests for v${version}`}`;
     await $`git push`;
 

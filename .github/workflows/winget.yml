@@ -42,7 +42,7 @@ jobs:
           $version = "${{ steps.version.outputs.version }}"
           $url = "https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip"
 
-          .\wingetcreate.exe update tolgamorf.env2op `
+          .\wingetcreate.exe update tolgamorf.env2op-cli `
             --version $version `
             --urls $url `
             --submit `

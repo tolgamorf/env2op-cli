@@ -16,7 +16,7 @@
 [![NPM version](https://img.shields.io/npm/v/@tolgamorf/env2op-cli?logo=npm)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
 [![Homebrew Formula Version](https://img.shields.io/github/v/release/tolgamorf/env2op-cli?logo=homebrew&label=homebrew&color=FBB040)](https://github.com/tolgamorf/homebrew-tap)
 [![Scoop Version](https://img.shields.io/scoop/v/env2op-cli?bucket=tolgamorf&logo=windows&logoColor=white)](https://github.com/tolgamorf/scoop-bucket)
-[![WinGet Version](https://img.shields.io/badge/winget-tolgamorf.env2op-0078D4?logo=windows&logoColor=white)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op)
+[![WinGet Version](https://img.shields.io/badge/winget-tolgamorf.env2op--cli-0078D4?logo=windows&logoColor=white)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
 [![CI](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/tolgamorf/env2op-cli/actions/workflows/ci.yml)
 [![GitHub issues](https://img.shields.io/github/issues/tolgamorf/env2op-cli)](https://github.com/tolgamorf/env2op-cli/issues)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/tolgamorf/env2op-cli/pulls)
@@ -54,7 +54,7 @@ scoop install env2op-cli
 ### Windows (WinGet)
 
 ```powershell
-winget install tolgamorf.env2op
+winget install tolgamorf.env2op-cli
 ```
 
 ### Package Managers (macOS/Linux/Windows)

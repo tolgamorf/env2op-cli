@@ -4,7 +4,7 @@ import { $ } from "bun";
 
 const HOMEBREW_TAP_PATH = "./homebrew-tap";
 const SCOOP_BUCKET_PATH = "./scoop-bucket";
-const SCOOP_MANIFEST_PATH = "./manifests/scoop/env2op-cli.json";
+const SCOOP_MANIFEST_PATH = "./scoop-bucket/bucket/env2op-cli.json";
 const WINGET_MANIFESTS_DIR = "./manifests/t/tolgamorf/env2op-cli";
 
 function getWingetManifestPath(version: string): string {
@@ -128,6 +128,11 @@ async function updateScoopManifest(version: string, sha256: string): Promise<voi
     manifest.architecture["64bit"].hash = sha256;
 
     await Bun.write(SCOOP_MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    // Commit and push to scoop-bucket
+    await $`git -C ${SCOOP_BUCKET_PATH} add bucket/env2op-cli.json`;
+    await $`git -C ${SCOOP_BUCKET_PATH} commit -m ${`v${version}`}`;
+    await $`git -C ${SCOOP_BUCKET_PATH} push`;
 }
 
 async function updateWingetManifest(version: string, sha256: string): Promise<void> {
@@ -165,18 +170,6 @@ async function updateWingetManifest(version: string, sha256: string): Promise<vo
     }
 }
 
-async function updateScoopBucket(version: string): Promise<void> {
-    const scoopBucketManifest = `${SCOOP_BUCKET_PATH}/bucket/env2op-cli.json`;
-
-    // Copy manifest to scoop-bucket
-    await $`cp ${SCOOP_MANIFEST_PATH} ${scoopBucketManifest}`;
-
-    // Commit and push
-    await $`git -C ${SCOOP_BUCKET_PATH} add bucket/env2op-cli.json`;
-    await $`git -C ${SCOOP_BUCKET_PATH} commit -m ${`v${version}`}`;
-    await $`git -C ${SCOOP_BUCKET_PATH} push`;
-}
-
 async function updateWindowsManifests(version: string): Promise<void> {
     console.log("Waiting for Windows build to complete...");
 
@@ -210,24 +203,21 @@ async function updateWindowsManifests(version: string): Promise<void> {
     const sha256 = await fetchWindowsZipSha256(version);
     console.log(`  SHA256: ${sha256}`);
 
-    // Update manifests
-    console.log("Updating Scoop manifest...");
+    // Update Scoop bucket (writes directly to scoop-bucket repo)
+    console.log("Updating Scoop bucket...");
     await updateScoopManifest(version, sha256);
+    console.log("Scoop bucket updated");
 
+    // Update Winget manifest
     console.log("Updating Winget manifest...");
     await updateWingetManifest(version, sha256);
 
-    // Commit and push manifest updates
-    await $`git add ${SCOOP_MANIFEST_PATH} ${WINGET_MANIFESTS_DIR}`;
-    await $`git commit -m ${`chore: Update Windows manifests for v${version}`}`;
+    // Commit and push Winget manifest updates
+    await $`git add ${WINGET_MANIFESTS_DIR}`;
+    await $`git commit -m ${`chore: Update Winget manifest for v${version}`}`;
     await $`git push`;
 
-    console.log("Windows manifests updated");
-
-    // Update Scoop bucket
-    console.log("Updating Scoop bucket...");
-    await updateScoopBucket(version);
-    console.log("Scoop bucket updated");
+    console.log("Winget manifest updated");
 }
 
 async function getLastTag(): Promise<string | null> {

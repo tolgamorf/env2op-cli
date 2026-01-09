@@ -6,7 +6,7 @@ const HOMEBREW_TAP_PATH = "./homebrew-tap";
 const SCOOP_BUCKET_PATH = "./scoop-bucket";
 const SCOOP_MANIFEST_PATH = "./scoop-bucket/bucket/env2op-cli.json";
 const WINGET_PKGS_PATH = "./winget-pkgs";
-const WINGET_MANIFESTS_DIR = "./winget-pkgs/t/tolgamorf/env2op-cli";
+const WINGET_MANIFESTS_DIR = "./winget-pkgs/manifests/t/tolgamorf/env2op-cli";
 
 function getWingetManifestDir(version: string): string {
     return `${WINGET_MANIFESTS_DIR}/${version}`;

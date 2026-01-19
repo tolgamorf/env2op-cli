@@ -11,6 +11,7 @@ const LOCAL_MANIFESTS_DIR = "./manifests";
 const LOCAL_HOMEBREW_FORMULA = `${LOCAL_MANIFESTS_DIR}/homebrew/env2op-cli.rb`;
 const LOCAL_SCOOP_MANIFEST = `${LOCAL_MANIFESTS_DIR}/scoop/env2op-cli.json`;
 const LOCAL_WINGET_DIR = `${LOCAL_MANIFESTS_DIR}/winget`;
+const LOCAL_CHOCOLATEY_DIR = `${LOCAL_MANIFESTS_DIR}/chocolatey`;
 
 function generateWingetVersionManifest(version: string): string {
     return `# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.10.0.schema.json
@@ -71,6 +72,61 @@ Tags:
   - dotenv
 ManifestType: defaultLocale
 ManifestVersion: 1.10.0
+`;
+}
+
+function generateChocolateyNuspec(version: string): string {
+    return `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>env2op-cli</id>
+    <version>${version}</version>
+    <title>env2op CLI</title>
+    <authors>Tolga O.</authors>
+    <owners>tolgamorf</owners>
+    <projectUrl>https://github.com/tolgamorf/env2op-cli</projectUrl>
+    <packageSourceUrl>https://github.com/tolgamorf/env2op-cli/tree/main/manifests/chocolatey</packageSourceUrl>
+    <licenseUrl>https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>cli env 1password secrets environment-variables dotenv op portable</tags>
+    <summary>Push .env files to 1Password and pull them back</summary>
+    <description><![CDATA[env2op-cli provides two commands:
+
+- **env2op**: Push .env files to 1Password as Secure Notes and generate templates
+- **op2env**: Pull secrets from 1Password using templates to generate .env files
+
+## Commands
+
+- \`env2op\` - Push .env to 1Password, generate .env.tpl template
+- \`op2env\` - Pull secrets from 1Password using .env.tpl template
+]]></description>
+    <releaseNotes>https://github.com/tolgamorf/env2op-cli/releases/tag/v${version}</releaseNotes>
+    <copyright>Copyright 2026 Tolga O.</copyright>
+    <dependencies>
+      <dependency id="1password-cli" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\\**" target="tools" />
+  </files>
+</package>
+`;
+}
+
+function generateChocolateyInstall(version: string, sha256: string): string {
+    const url = `https://github.com/tolgamorf/env2op-cli/releases/download/v${version}/env2op-windows-x64.zip`;
+    return `$ErrorActionPreference = 'Stop'
+$toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
+
+$packageArgs = @{
+    packageName    = $env:ChocolateyPackageName
+    unzipLocation  = $toolsDir
+    url64bit       = '${url}'
+    checksum64     = '${sha256.toUpperCase()}'
+    checksumType64 = 'sha256'
+}
+
+Install-ChocolateyZipPackage @packageArgs
 `;
 }
 
@@ -220,6 +276,18 @@ async function updateLocalWingetManifests(version: string, sha256: string): Prom
     );
 }
 
+// UTF-8 BOM prefix required for PowerShell scripts
+const UTF8_BOM = "\uFEFF";
+
+async function updateLocalChocolateyManifests(version: string, sha256: string): Promise<void> {
+    await Bun.write(`${LOCAL_CHOCOLATEY_DIR}/env2op-cli.nuspec`, generateChocolateyNuspec(version));
+    // PowerShell scripts require UTF-8 with BOM per Chocolatey requirements
+    await Bun.write(
+        `${LOCAL_CHOCOLATEY_DIR}/tools/chocolateyinstall.ps1`,
+        UTF8_BOM + generateChocolateyInstall(version, sha256),
+    );
+}
+
 async function updateWindowsManifests(version: string): Promise<void> {
     console.log("Waiting for Windows build to complete...");
 
@@ -262,6 +330,11 @@ async function updateWindowsManifests(version: string): Promise<void> {
     console.log("Updating local Winget manifests...");
     await updateLocalWingetManifests(version, sha256);
     console.log("Winget manifests updated");
+
+    // Update local Chocolatey manifests
+    console.log("Updating local Chocolatey manifests...");
+    await updateLocalChocolateyManifests(version, sha256);
+    console.log("Chocolatey manifests updated");
 }
 
 async function getLastTag(): Promise<string | null> {

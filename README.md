@@ -2,16 +2,12 @@
 
 ### Push `.env` files to [1Password](https://1password.com) and pull them back with two simple commands.
 
-
 [![NPM version](https://img.shields.io/npm/v/@tolgamorf/env2op-cli?logo=npm&logoColor=white)](https://www.npmjs.com/package/@tolgamorf/env2op-cli)
 [![Homebrew Formula Version](https://img.shields.io/github/v/release/tolgamorf/env2op-cli?label=homebrew&logo=homebrew&logoColor=white)](https://github.com/tolgamorf/homebrew-tap)
 [![Scoop Version](https://img.shields.io/scoop/v/env2op-cli?bucket=https%3A%2F%2Fgithub.com%2Ftolgamorf%2Fscoop-bucket&logo=vanilla-extract&logoColor=white)](https://github.com/tolgamorf/scoop-bucket)
-[![WinGet Version](https://img.shields.io/github/v/release/tolgamorf/env2op-cli?label=winget&logo=data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEuNDg4IDQuMzI1YzAtLjY0Ny41MzUtMS4xNzIgMS4xOTUtMS4xNzJoMTguNjM0Yy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxLjY5OUgxLjQ4OHYtMS43em0xLjQ4OC0zLjE1M0MyLjk3Ni41MjUgMy41MTEgMCA0LjE3MSAwSDE5LjgzYy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxLjY1MkgyLjk3NlYxLjE3MnptMTkuODI5IDUuMTgxYy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxNS4zMDNjMCAuNjQ3LS41MzUgMS4xNzItMS4xOTUgMS4xNzJIMS4xOTVDLjUzNSAyNCAwIDIzLjQ3NSAwIDIyLjgyOFY3LjUyNWMwLS42NDcuNTM1LTEuMTcyIDEuMTk1LTEuMTcyaDIxLjYxek0xMS45NjkgOS4yOTRjLS45NjkgMC0xLjUuNzY2LTEuNSAxLjYyNHY1LjExNmwtMS4wOTQtMS4wNDFjLS42MjUtLjYxMy0xLjUtLjczNi0yLjE4Ny0uMTIzLS44NzUuOTUtLjI1IDEuODM3LjI1IDIuMzZsMy4zNzUgMy4yNzdjLjIxMy4xODQuNjI1LjUyMSAxLjE1Ni41MjEuNTMxIDAgLjk0Mi0uMzM3IDEuMTU2LS41MmwzLjM3NS0zLjI3OWMuNS0uNTIyIDEuMTI1LTEuNDEuMjUtMi4zNTktLjY4Ny0uNjEzLTEuNTYyLS40OS0yLjE4Ny4xMjNsLTEuMDk0IDEuMDQxdi01LjExNmMwLS44NTgtLjUzMS0xLjYyNC0xLjUtMS42MjR6Ii8+PC9zdmc+)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
+[![Chocolatey Version](https://img.shields.io/chocolatey/v/env2op-cli?logo=chocolatey&logoColor=white)](https://community.chocolatey.org/packages/env2op-cli)
+[![WinGet Package Version](https://img.shields.io/winget/v/tolgamorf.env2op-cli?logo=data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEuNDg4IDQuMzI1YzAtLjY0Ny41MzUtMS4xNzIgMS4xOTUtMS4xNzJoMTguNjM0Yy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxLjY5OUgxLjQ4OHYtMS43em0xLjQ4OC0zLjE1M0MyLjk3Ni41MjUgMy41MTEgMCA0LjE3MSAwSDE5LjgzYy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxLjY1MkgyLjk3NlYxLjE3MnptMTkuODI5IDUuMTgxYy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxNS4zMDNjMCAuNjQ3LS41MzUgMS4xNzItMS4xOTUgMS4xNzJIMS4xOTVDLjUzNSAyNCAwIDIzLjQ3NSAwIDIyLjgyOFY3LjUyNWMwLS42NDcuNTM1LTEuMTcyIDEuMTk1LTEuMTcyaDIxLjYxek0xMS45NjkgOS4yOTRjLS45NjkgMC0xLjUuNzY2LTEuNSAxLjYyNHY1LjExNmwtMS4wOTQtMS4wNDFjLS42MjUtLjYxMy0xLjUtLjczNi0yLjE4Ny0uMTIzLS44NzUuOTUtLjI1IDEuODM3LjI1IDIuMzZsMy4zNzUgMy4yNzdjLjIxMy4xODQuNjI1LjUyMSAxLjE1Ni41MjEuNTMxIDAgLjk0Mi0uMzM3IDEuMTU2LS41MmwzLjM3NS0zLjI3OWMuNS0uNTIyIDEuMTI1LTEuNDEuMjUtMi4zNTktLjY4Ny0uNjEzLTEuNTYyLS40OS0yLjE4Ny4xMjNsLTEuMDk0IDEuMDQxdi01LjExNmMwLS44NTgtLjUzMS0xLjYyNC0xLjUtMS42MjR6Ii8+PC9zdmc+)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
 
-<!--
-[![WinGet Version](https://img.shields.io/badge/winget-tolgamorf.env2op--cli-0078D4?logo=data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEuNDg4IDQuMzI1YzAtLjY0Ny41MzUtMS4xNzIgMS4xOTUtMS4xNzJoMTguNjM0Yy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxLjY5OUgxLjQ4OHYtMS43em0xLjQ4OC0zLjE1M0MyLjk3Ni41MjUgMy41MTEgMCA0LjE3MSAwSDE5LjgzYy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxLjY1MkgyLjk3NlYxLjE3MnptMTkuODI5IDUuMTgxYy42NiAwIDEuMTk1LjUyNSAxLjE5NSAxLjE3MnYxNS4zMDNjMCAuNjQ3LS41MzUgMS4xNzItMS4xOTUgMS4xNzJIMS4xOTVDLjUzNSAyNCAwIDIzLjQ3NSAwIDIyLjgyOFY3LjUyNWMwLS42NDcuNTM1LTEuMTcyIDEuMTk1LTEuMTcyaDIxLjYxek0xMS45NjkgOS4yOTRjLS45NjkgMC0xLjUuNzY2LTEuNSAxLjYyNHY1LjExNmwtMS4wOTQtMS4wNDFjLS42MjUtLjYxMy0xLjUtLjczNi0yLjE4Ny0uMTIzLS44NzUuOTUtLjI1IDEuODM3LjI1IDIuMzZsMy4zNzUgMy4yNzdjLjIxMy4xODQuNjI1LjUyMSAxLjE1Ni41MjEuNTMxIDAgLjk0Mi0uMzM3IDEuMTU2LS41MmwzLjM3NS0zLjI3OWMuNS0uNTIyIDEuMTI1LTEuNDEuMjUtMi4zNTktLjY4Ny0uNjEzLTEuNTYyLS40OS0yLjE4Ny4xMjNsLTEuMDk0IDEuMDQxdi01LjExNmMwLS44NTgtLjUzMS0xLjYyNC0xLjUtMS42MjR6Ii8+PC9zdmc+)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
-[![WinGet Package Version](https://img.shields.io/winget/v/tolgamorf.env2op-cli)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/t/tolgamorf/env2op-cli)
--->
 
 ![env2op demo](./demo/env2op-demo.gif)
 
@@ -50,14 +46,20 @@ brew install env2op-cli
 brew install tolgamorf/tap/env2op-cli
 ```
 
-### Windows (Scoop)
+### Scoop (Windows)
 
 ```powershell
 scoop bucket add tolgamorf https://github.com/tolgamorf/scoop-bucket
 scoop install env2op-cli
 ```
 
-### Windows (WinGet)
+### Chocolatey (Windows)
+
+```powershell
+choco install env2op-cli
+```
+
+### WinGet (Windows)
 
 ```powershell
 winget install tolgamorf.env2op-cli

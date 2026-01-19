@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>env2op-cli</id>
+    <version>0.2.5</version>
+    <title>env2op CLI</title>
+    <authors>Tolga O.</authors>
+    <owners>tolgamorf</owners>
+    <projectUrl>https://github.com/tolgamorf/env2op-cli</projectUrl>
+    <packageSourceUrl>https://github.com/tolgamorf/env2op-cli/tree/main/manifests/chocolatey</packageSourceUrl>
+    <licenseUrl>https://github.com/tolgamorf/env2op-cli/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>cli env 1password secrets environment-variables dotenv op portable</tags>
+    <summary>Push .env files to 1Password and pull them back</summary>
+    <description><![CDATA[env2op-cli provides two commands:
+
+- **env2op**: Push .env files to 1Password as Secure Notes and generate templates
+- **op2env**: Pull secrets from 1Password using templates to generate .env files
+
+## Commands
+
+- `env2op` - Push .env to 1Password, generate .env.tpl template
+- `op2env` - Pull secrets from 1Password using .env.tpl template
+]]></description>
+    <releaseNotes>https://github.com/tolgamorf/env2op-cli/releases/tag/v0.2.5</releaseNotes>
+    <copyright>Copyright 2026 Tolga O.</copyright>
+    <dependencies>
+      <dependency id="1password-cli" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

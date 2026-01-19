@@ -204,4 +204,4 @@ homebrew-tap
 scoop-bucket
 
 # Test scripts
-.test
+.testmanifests/chocolatey/*.nupkg

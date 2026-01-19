@@ -1,0 +1,56 @@
+name: Update Chocolatey
+
+on:
+  workflow_run:
+    workflows: ["Build Windows"]
+    types: [completed]
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Setup Chocolatey
+        uses: crazy-max/ghaction-chocolatey@v3
+        with:
+          args: --version
+
+      - name: Pack Chocolatey package
+        shell: pwsh
+        run: |
+          $manifestDir = "manifests/chocolatey"
+          choco pack "$manifestDir/env2op-cli.nuspec" --outputdirectory "$manifestDir"
+          $nupkg = Get-ChildItem "$manifestDir/*.nupkg" | Select-Object -First 1
+          if (-not $nupkg) {
+            throw "Failed to create .nupkg file"
+          }
+          echo "Created package: $($nupkg.Name)"
+
+      - name: Push to Chocolatey Community Repository
+        shell: pwsh
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          $nupkg = Get-ChildItem "manifests/chocolatey/*.nupkg" | Select-Object -First 1
+          choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+
+      - name: Output summary
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          echo "## Chocolatey Package Published" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Package**: env2op-cli" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Version**: $version" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Repository**: [community.chocolatey.org](https://community.chocolatey.org/packages/env2op-cli)" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "> **Note**: Package is pending moderation. It may take 1-2 days to appear in the community repository." >> $env:GITHUB_STEP_SUMMARY

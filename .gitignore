@@ -203,5 +203,8 @@ homebrew-tap
 # Scoop bucket (separate repo)
 scoop-bucket
 
-# Test scripts
-.testmanifests/chocolatey/*.nupkg
+# Test directory
+.test/
+
+# Chocolatey build artifacts
+manifests/chocolatey/*.nupkg

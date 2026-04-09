@@ -27,8 +27,9 @@ jobs:
       - name: Pack Chocolatey package
         shell: pwsh
         run: |
+          $version = "${{ steps.version.outputs.version }}"
           $manifestDir = "manifests/chocolatey"
-          choco pack "$manifestDir/env2op-cli.nuspec" --outputdirectory "$manifestDir"
+          choco pack "$manifestDir/env2op-cli.nuspec" --version $version --outputdirectory "$manifestDir"
           $nupkg = Get-ChildItem "$manifestDir/*.nupkg" | Select-Object -First 1
           if (-not $nupkg) {
             throw "Failed to create .nupkg file"

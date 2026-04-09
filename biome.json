@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,7 +7,12 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/.next", "!**/node_modules", "!**/*.log"]
+    "includes": [
+      "**",
+      "!**/.next",
+      "!**/node_modules",
+      "!**/*.log"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -83,8 +88,12 @@
           "level": "error",
           "fix": "safe",
           "options": {
-            "attributes": ["className"],
-            "functions": ["cn"]
+            "attributes": [
+              "className"
+            ],
+            "functions": [
+              "cn"
+            ]
           }
         }
       }

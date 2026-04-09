@@ -7,12 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!**/.next",
-      "!**/node_modules",
-      "!**/*.log"
-    ]
+    "includes": ["**", "!**/.next", "!**/node_modules", "!**/*.log"]
   },
   "formatter": {
     "enabled": true,
@@ -88,12 +83,8 @@
           "level": "error",
           "fix": "safe",
           "options": {
-            "attributes": [
-              "className"
-            ],
-            "functions": [
-              "cn"
-            ]
+            "attributes": ["className"],
+            "functions": ["cn"]
           }
         }
       }

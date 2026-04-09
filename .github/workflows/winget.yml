@@ -108,6 +108,19 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
 
+      - name: Sync winget-pkgs fork
+        shell: pwsh
+        env:
+          WINGET_PAT: ${{ secrets.WINGET_PAT }}
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:WINGET_PAT"
+            Accept = "application/vnd.github+json"
+          }
+          $body = '{"branch":"master"}'
+          Invoke-RestMethod -Uri "https://api.github.com/repos/tolgamorf/winget-pkgs/merge-upstream" -Method Post -Headers $headers -Body $body -ContentType "application/json"
+          Write-Host "Fork synced with upstream"
+
       - name: Submit Winget manifest
         shell: pwsh
         env:

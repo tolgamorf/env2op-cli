@@ -1,5 +1,8 @@
+import { unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { errors } from "../utils/errors";
-import { exec, execWithStdin } from "../utils/shell";
+import { exec } from "../utils/shell";
 import type { CreateItemOptions, CreateItemResult, EditItemOptions } from "./types";
 
 interface VerboseOption {
@@ -82,10 +85,23 @@ interface OpItemResult {
     fields?: Array<{ label: string; id: string; type?: string }>;
 }
 
-interface OpItemTemplate {
-    title: string;
-    vault: { name: string };
-    category: string;
+let tempCounter = 0;
+
+function writeTempTemplate(template: OpFieldsTemplate): string {
+    const filePath = join(tmpdir(), `env2op-template-${process.pid}-${++tempCounter}.json`);
+    writeFileSync(filePath, JSON.stringify(template), "utf-8");
+    return filePath;
+}
+
+function cleanupTempFile(filePath: string): void {
+    try {
+        unlinkSync(filePath);
+    } catch {
+        // ignore cleanup errors
+    }
+}
+
+interface OpFieldsTemplate {
     fields: Array<{
         type: "STRING" | "CONCEALED";
         label: string;
@@ -94,19 +110,12 @@ interface OpItemTemplate {
 }
 
 /**
- * Build JSON template for 1Password item (works for both create and edit)
+ * Build JSON template containing only fields for 1Password item.
+ * Metadata (title, vault, category) is passed via CLI flags.
  */
-function buildItemTemplate(
-    title: string,
-    vault: string,
-    fields: Array<{ key: string; value: string }>,
-    secret: boolean,
-): OpItemTemplate {
+function buildFieldsTemplate(fields: Array<{ key: string; value: string }>, secret: boolean): OpFieldsTemplate {
     const fieldType = secret ? "CONCEALED" : "STRING";
     return {
-        title,
-        vault: { name: vault },
-        category: "SECURE_NOTE",
         fields: fields.map(({ key, value }) => ({
             type: fieldType,
             label: key,
@@ -121,11 +130,28 @@ function buildItemTemplate(
 export async function createSecureNote(options: CreateItemOptions & VerboseOption): Promise<CreateItemResult> {
     const { vault, title, fields, secret, verbose } = options;
 
-    const template = buildItemTemplate(title, vault, fields, secret);
-    const json = JSON.stringify(template);
+    const template = buildFieldsTemplate(fields, secret);
+    const templatePath = writeTempTemplate(template);
 
     try {
-        const result = await execWithStdin("op", ["item", "create", "--format", "json"], { stdin: json, verbose });
+        const result = await exec(
+            "op",
+            [
+                "item",
+                "create",
+                "--category",
+                "Secure Note",
+                "--title",
+                title,
+                "--vault",
+                vault,
+                "--template",
+                templatePath,
+                "--format",
+                "json",
+            ],
+            { verbose },
+        );
 
         if (result.exitCode !== 0) {
             throw new Error(result.stderr || "Failed to create item");
@@ -151,6 +177,8 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw errors.itemCreateFailed(message);
+    } finally {
+        cleanupTempFile(templatePath);
     }
 }
 
@@ -162,14 +190,27 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
 export async function editSecureNote(options: EditItemOptions & VerboseOption): Promise<CreateItemResult> {
     const { vault, title, fields, secret, verbose, itemId } = options;
 
-    const template = buildItemTemplate(title, vault, fields, secret);
-    const json = JSON.stringify(template);
+    const template = buildFieldsTemplate(fields, secret);
+    const templatePath = writeTempTemplate(template);
 
     try {
-        const result = await execWithStdin("op", ["item", "edit", itemId, "--format", "json"], {
-            stdin: json,
-            verbose,
-        });
+        const result = await exec(
+            "op",
+            [
+                "item",
+                "edit",
+                itemId,
+                "--title",
+                title,
+                "--vault",
+                vault,
+                "--template",
+                templatePath,
+                "--format",
+                "json",
+            ],
+            { verbose },
+        );
 
         if (result.exitCode !== 0) {
             throw new Error(result.stderr || "Failed to edit item");
@@ -195,5 +236,7 @@ export async function editSecureNote(options: EditItemOptions & VerboseOption): 
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw errors.itemEditFailed(message);
+    } finally {
+        cleanupTempFile(templatePath);
     }
 }

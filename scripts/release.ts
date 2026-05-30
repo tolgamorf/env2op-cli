@@ -190,7 +190,22 @@ async function fetchSha256(version: string, maxRetries = 12): Promise<string> {
     throw new Error("Failed to fetch tarball after max retries");
 }
 
+/**
+ * Sync a sibling manifest repo to its remote main before we regenerate and
+ * push. These repos only hold generated content, so hard-resetting to
+ * origin/main is safe and avoids the non-fast-forward push rejections that
+ * happen when a prior release (or another machine) pushed there but this
+ * checkout was never pulled.
+ */
+async function syncSiblingRepo(path: string): Promise<void> {
+    await $`git -C ${path} fetch origin --quiet`;
+    await $`git -C ${path} checkout --quiet main`;
+    await $`git -C ${path} reset --hard --quiet origin/main`;
+}
+
 async function updateHomebrewTap(version: string, sha256: string): Promise<void> {
+    await syncSiblingRepo(HOMEBREW_TAP_PATH);
+
     const formulaDir = `${HOMEBREW_TAP_PATH}/Formula`;
     const mainFormula = generateFormula(version, sha256, false);
 
@@ -201,10 +216,13 @@ async function updateHomebrewTap(version: string, sha256: string): Promise<void>
     const versionedFormula = generateFormula(version, sha256, true);
     await Bun.write(`${formulaDir}/env2op-cli@${version}.rb`, versionedFormula);
 
-    // Commit and push
-    await $`git -C ${HOMEBREW_TAP_PATH} add Formula/`;
-    await $`git -C ${HOMEBREW_TAP_PATH} commit -m ${`v${version}`}`;
-    await $`git -C ${HOMEBREW_TAP_PATH} push`;
+    // Commit and push (skip if nothing changed, so the step is re-runnable)
+    const changed = (await $`git -C ${HOMEBREW_TAP_PATH} status --porcelain`.text()).trim();
+    if (changed) {
+        await $`git -C ${HOMEBREW_TAP_PATH} add Formula/`;
+        await $`git -C ${HOMEBREW_TAP_PATH} commit -m ${`v${version}`}`;
+        await $`git -C ${HOMEBREW_TAP_PATH} push`;
+    }
 
     // Copy to local manifests folder
     await Bun.write(LOCAL_HOMEBREW_FORMULA, mainFormula);
@@ -242,6 +260,8 @@ async function fetchWindowsZipSha256(version: string, maxRetries = 30): Promise<
 }
 
 async function updateScoopManifest(version: string, sha256: string): Promise<void> {
+    await syncSiblingRepo(SCOOP_BUCKET_PATH);
+
     const manifest = await Bun.file(SCOOP_MANIFEST_PATH).json();
 
     manifest.version = version;
@@ -254,10 +274,13 @@ async function updateScoopManifest(version: string, sha256: string): Promise<voi
     // Write to scoop-bucket repo
     await Bun.write(SCOOP_MANIFEST_PATH, manifestContent);
 
-    // Commit and push to scoop-bucket
-    await $`git -C ${SCOOP_BUCKET_PATH} add bucket/env2op-cli.json`;
-    await $`git -C ${SCOOP_BUCKET_PATH} commit -m ${`v${version}`}`;
-    await $`git -C ${SCOOP_BUCKET_PATH} push`;
+    // Commit and push to scoop-bucket (skip if unchanged, so it is re-runnable)
+    const changed = (await $`git -C ${SCOOP_BUCKET_PATH} status --porcelain`.text()).trim();
+    if (changed) {
+        await $`git -C ${SCOOP_BUCKET_PATH} add bucket/env2op-cli.json`;
+        await $`git -C ${SCOOP_BUCKET_PATH} commit -m ${`v${version}`}`;
+        await $`git -C ${SCOOP_BUCKET_PATH} push`;
+    }
 
     // Copy to local manifests folder
     await Bun.write(LOCAL_SCOOP_MANIFEST, manifestContent);
@@ -474,8 +497,54 @@ pnpm add -g @tolgamorf/env2op-cli
     return noteSections.join("\n---\n\n");
 }
 
+/**
+ * Re-run only the post-publish steps for an already-published version: update
+ * the Homebrew tap, Scoop bucket, and local Winget/Chocolatey manifests, then
+ * commit the local manifest copies. Use when the main release flow published to
+ * npm/GitHub but failed during the downstream manifest updates.
+ */
+async function finalize(version: string): Promise<void> {
+    const tag = `v${version}`;
+    console.log(`Finalizing ${tag} — re-running post-publish steps...\n`);
+
+    // Update Homebrew tap (external repo + local copy)
+    console.log("Updating Homebrew tap...");
+    const sha256 = await fetchSha256(version);
+    await updateHomebrewTap(version, sha256);
+    console.log("Homebrew tap updated");
+
+    // Update Windows manifests (Scoop push + local Winget/Chocolatey)
+    await updateWindowsManifests(version);
+
+    // Commit and push updated local manifests (only if something changed)
+    const manifestStatus = (await $`git status --porcelain manifests/`.text()).trim();
+    if (manifestStatus) {
+        console.log("Committing updated manifests...");
+        await $`git add manifests/`;
+        await $`git commit -m ${`chore: update manifests for ${tag}`}`;
+        await $`git push`;
+        console.log("Manifests committed and pushed");
+    } else {
+        console.log("No local manifest changes to commit");
+    }
+
+    console.log(`\n${tag} finalized.`);
+}
+
 async function release() {
     const versionArg = process.argv[2];
+
+    // Resume mode: `bun run release --finalize <x.y.z>` re-runs only the
+    // downstream manifest steps for a version already published to npm/GitHub.
+    if (versionArg === "--finalize") {
+        const finalizeVersion = process.argv[3];
+        if (!finalizeVersion || !isValidVersion(finalizeVersion)) {
+            console.log("Usage: bun run release --finalize <x.y.z>");
+            process.exit(1);
+        }
+        await finalize(finalizeVersion);
+        return;
+    }
 
     // Check for unstaged changes
     const status = await $`git status --porcelain`.text();

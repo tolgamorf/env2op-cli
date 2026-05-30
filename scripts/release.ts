@@ -437,14 +437,11 @@ function buildReleaseNotes(commits: Commit[]): string {
                 .map((commit) => {
                     let note = `### ${commit.subject}\n`;
                     if (commit.body) {
-                        const bodyLines = commit.body
-                            .split("\n")
-                            .map((line) => line.trim())
-                            .filter((line) => line.length > 0)
-                            .map((line) => (line.startsWith("-") || line.startsWith("*") ? line : `- ${line}`));
-                        if (bodyLines.length > 0) {
-                            note += `\n${bodyLines.join("\n")}\n`;
-                        }
+                        // Render the body as-is. Markdown keeps blank lines as
+                        // paragraph breaks and lines starting with - or * as
+                        // bullets. Don't force a bullet onto every line — that
+                        // turned soft-wrapped sentences into one-line bullets.
+                        note += `\n${commit.body}\n`;
                     }
                     return note;
                 })

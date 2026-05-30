@@ -498,6 +498,22 @@ pnpm add -g @tolgamorf/env2op-cli
 }
 
 /**
+ * Bring the current branch up to date with its remote before committing and
+ * pushing, so a stale local checkout doesn't trigger a non-fast-forward
+ * rejection mid-release. Aborts with guidance if the rebase can't proceed.
+ */
+async function syncCurrentBranch(): Promise<void> {
+    console.log("Syncing with remote...");
+    try {
+        await $`git pull --rebase`.quiet();
+    } catch {
+        console.log("Could not fast-forward the current branch (git pull --rebase failed).");
+        console.log("Resolve the divergence manually, then re-run.");
+        process.exit(0);
+    }
+}
+
+/**
  * Re-run only the post-publish steps for an already-published version: update
  * the Homebrew tap, Scoop bucket, and local Winget/Chocolatey manifests, then
  * commit the local manifest copies. Use when the main release flow published to
@@ -506,6 +522,8 @@ pnpm add -g @tolgamorf/env2op-cli
 async function finalize(version: string): Promise<void> {
     const tag = `v${version}`;
     console.log(`Finalizing ${tag} — re-running post-publish steps...\n`);
+
+    await syncCurrentBranch();
 
     // Update Homebrew tap (external repo + local copy)
     console.log("Updating Homebrew tap...");
@@ -552,6 +570,9 @@ async function release() {
         console.log("You have unstaged changes. Commit or stash them first.");
         process.exit(0);
     }
+
+    // Make sure the local branch is current so the release push fast-forwards.
+    await syncCurrentBranch();
 
     // Run checks before releasing
     console.log("Running checks...");

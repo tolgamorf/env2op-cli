@@ -2,7 +2,7 @@ import { unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { errors } from "../utils/errors";
-import { exec } from "../utils/shell";
+import { exec, execWithStdin } from "../utils/shell";
 import type { CreateItemOptions, CreateItemResult, EditItemOptions } from "./types";
 
 interface VerboseOption {
@@ -125,16 +125,70 @@ function buildFieldsTemplate(fields: Array<{ key: string; value: string }>, secr
 }
 
 /**
+ * Build a full item template (metadata + fields) to pipe via stdin.
+ *
+ * Fallback for the WSL → Windows `op.exe` shim: a Windows process spawned from
+ * WSL never sees stdin as a TTY, so op.exe always concludes piped input is
+ * present and refuses `--template`. Piping the whole template via stdin (no
+ * `--template`) is the form op.exe accepts there — the pre-0.2.7 approach.
+ */
+function buildFullTemplate(
+    title: string,
+    vault: string,
+    fields: Array<{ key: string; value: string }>,
+    secret: boolean,
+): OpFieldsTemplate & { title: string; vault: { name: string }; category: string } {
+    return {
+        title,
+        vault: { name: vault },
+        category: "SECURE_NOTE",
+        ...buildFieldsTemplate(fields, secret),
+    };
+}
+
+/**
+ * op refuses to combine `--template` with piped stdin. When op.exe (WSL) wrongly
+ * believes stdin is piped, it emits this collision error even though we passed
+ * none — our cue to retry by actually piping the template via stdin instead.
+ */
+function isTemplateStdinCollision(stderr: string): boolean {
+    const s = stderr.toLowerCase();
+    return s.includes("template") && (s.includes("stdin") || s.includes("piped input"));
+}
+
+/**
+ * Parse `op item create/edit --format json` output into a CreateItemResult,
+ * mapping each field's label to its 1Password field ID.
+ */
+function parseItemResult(stdout: string, vault: string): CreateItemResult {
+    const item = JSON.parse(stdout) as OpItemResult;
+
+    const fieldIds: Record<string, string> = {};
+    for (const field of item.fields ?? []) {
+        if (field.label && field.id) {
+            fieldIds[field.label] = field.id;
+        }
+    }
+
+    return {
+        id: item.id,
+        title: item.title,
+        vault: item.vault?.name ?? vault,
+        vaultId: item.vault?.id ?? "",
+        fieldIds,
+    };
+}
+
+/**
  * Create a Secure Note in 1Password with the given fields
  */
 export async function createSecureNote(options: CreateItemOptions & VerboseOption): Promise<CreateItemResult> {
     const { vault, title, fields, secret, verbose } = options;
 
-    const template = buildFieldsTemplate(fields, secret);
-    const templatePath = writeTempTemplate(template);
+    const templatePath = writeTempTemplate(buildFieldsTemplate(fields, secret));
 
     try {
-        const result = await exec(
+        let result = await exec(
             "op",
             [
                 "item",
@@ -153,27 +207,21 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
             { verbose },
         );
 
+        // WSL → Windows op.exe always treats the spawned stdin as piped input
+        // and rejects --template. Fall back to piping the full template via
+        // stdin (no --template), which op.exe accepts.
+        if (result.exitCode !== 0 && isTemplateStdinCollision(result.stderr)) {
+            result = await execWithStdin("op", ["item", "create", "--format", "json"], {
+                stdin: JSON.stringify(buildFullTemplate(title, vault, fields, secret)),
+                verbose,
+            });
+        }
+
         if (result.exitCode !== 0) {
             throw new Error(result.stderr || "Failed to create item");
         }
 
-        const item = JSON.parse(result.stdout) as OpItemResult;
-
-        // Extract field IDs mapped by label
-        const fieldIds: Record<string, string> = {};
-        for (const field of item.fields ?? []) {
-            if (field.label && field.id) {
-                fieldIds[field.label] = field.id;
-            }
-        }
-
-        return {
-            id: item.id,
-            title: item.title,
-            vault: item.vault?.name ?? vault,
-            vaultId: item.vault?.id ?? "",
-            fieldIds,
-        };
+        return parseItemResult(result.stdout, vault);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw errors.itemCreateFailed(message);
@@ -190,11 +238,10 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
 export async function editSecureNote(options: EditItemOptions & VerboseOption): Promise<CreateItemResult> {
     const { vault, title, fields, secret, verbose, itemId } = options;
 
-    const template = buildFieldsTemplate(fields, secret);
-    const templatePath = writeTempTemplate(template);
+    const templatePath = writeTempTemplate(buildFieldsTemplate(fields, secret));
 
     try {
-        const result = await exec(
+        let result = await exec(
             "op",
             [
                 "item",
@@ -212,27 +259,21 @@ export async function editSecureNote(options: EditItemOptions & VerboseOption): 
             { verbose },
         );
 
+        // WSL → Windows op.exe always treats the spawned stdin as piped input
+        // and rejects --template. Fall back to piping the full template via
+        // stdin (no --template), which op.exe accepts.
+        if (result.exitCode !== 0 && isTemplateStdinCollision(result.stderr)) {
+            result = await execWithStdin("op", ["item", "edit", itemId, "--format", "json"], {
+                stdin: JSON.stringify(buildFullTemplate(title, vault, fields, secret)),
+                verbose,
+            });
+        }
+
         if (result.exitCode !== 0) {
             throw new Error(result.stderr || "Failed to edit item");
         }
 
-        const item = JSON.parse(result.stdout) as OpItemResult;
-
-        // Extract field IDs mapped by label
-        const fieldIds: Record<string, string> = {};
-        for (const field of item.fields ?? []) {
-            if (field.label && field.id) {
-                fieldIds[field.label] = field.id;
-            }
-        }
-
-        return {
-            id: item.id,
-            title: item.title,
-            vault: item.vault?.name ?? vault,
-            vaultId: item.vault?.id ?? "",
-            fieldIds,
-        };
+        return parseItemResult(result.stdout, vault);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw errors.itemEditFailed(message);

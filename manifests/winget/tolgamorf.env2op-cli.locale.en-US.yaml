@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
 
 PackageIdentifier: tolgamorf.env2op-cli
-PackageVersion: 0.2.8
+PackageVersion: 0.2.9
 PackageLocale: en-US
 Publisher: Tolga O.
 PublisherUrl: https://github.com/tolgamorf

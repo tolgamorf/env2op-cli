@@ -52,7 +52,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "useTemplate": "error",
         "noUnusedTemplateLiteral": "error",

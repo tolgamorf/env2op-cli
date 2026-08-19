@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { getCliVersion } from "../lib/update";
 import { HEADER_SEPARATOR } from "./constants";
+import { stripBom, stripHeaders } from "./env-parser";
 import type { TemplateOptions } from "./types";
 
 /**
@@ -81,6 +82,14 @@ export function generateEnvHeader(envFileName: string): string[] {
         "",
         "",
     ];
+}
+
+/**
+ * Strip any existing header (and BOM) from env file content and prepend a fresh one,
+ * so its Pulled stamp records the sync that just happened
+ */
+export function refreshEnvHeader(rawContent: string, envFileName: string): string {
+    return generateEnvHeader(envFileName).join("\n") + stripHeaders(stripBom(rawContent));
 }
 
 /**

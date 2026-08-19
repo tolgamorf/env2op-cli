@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { ensureOpAuthenticated } from "../core/auth";
 import { stripHeaders } from "../core/env-parser";
-import { generateEnvHeader } from "../core/template-generator";
+import { refreshEnvHeader } from "../core/template-generator";
 import type { InjectOptions } from "../core/types";
 import { getCliVersion } from "../lib/update";
 import { handleCommandError } from "../utils/error-handler";
@@ -82,8 +82,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
             // Strip any existing headers and prepend fresh .env header
             const rawContent = readFileSync(outputPath, "utf-8");
             const envContent = stripHeaders(rawContent);
-            const header = generateEnvHeader(basename(outputPath)).join("\n");
-            writeFileSync(outputPath, header + envContent, "utf-8");
+            writeFileSync(outputPath, refreshEnvHeader(rawContent, basename(outputPath)), "utf-8");
 
             // Count variables (non-empty, non-comment lines)
             const varCount = envContent

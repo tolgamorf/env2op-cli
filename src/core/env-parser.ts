@@ -72,7 +72,7 @@ function parseValue(raw: string): string {
  * Strip UTF-8 BOM (Byte Order Mark) from content if present
  * Common on Windows-created files
  */
-function stripBom(content: string): string {
+export function stripBom(content: string): string {
     if (content.charCodeAt(0) === 0xfeff) {
         return content.slice(1);
     }

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { generateTemplateContent, generateUsageInstructions } from "../../src/core/template-generator";
+import { HEADER_SEPARATOR } from "../../src/core/constants";
+import {
+    generateTemplateContent,
+    generateUsageInstructions,
+    refreshEnvHeader,
+} from "../../src/core/template-generator";
 import type { TemplateOptions } from "../../src/core/types";
 
 describe("generateTemplateContent", () => {
@@ -142,5 +147,58 @@ describe("generateUsageInstructions", () => {
     test("uses provided template path", () => {
         const instructions = generateUsageInstructions("/path/to/secrets.tpl");
         expect(instructions).toContain("op2env /path/to/secrets.tpl");
+    });
+});
+
+describe("refreshEnvHeader", () => {
+    const body = "KEY1=value1\n\n# a user comment\nKEY2=value2\n";
+
+    const oldHeader = [
+        HEADER_SEPARATOR,
+        "#  .env — Environment Variables",
+        "#",
+        "#  Pulled: 2020-01-01 00:00:00 UTC",
+        HEADER_SEPARATOR,
+        "",
+        "",
+    ].join("\n");
+
+    const countSeparators = (content: string): number =>
+        content.split("\n").filter((line) => line.trim() === HEADER_SEPARATOR).length;
+
+    test("replaces an existing header, refreshing the Pulled stamp", () => {
+        const result = refreshEnvHeader(oldHeader + body, ".env");
+
+        expect(result).not.toContain("2020-01-01");
+        expect(result).toMatch(/^#\s+Pulled: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$/m);
+        expect(countSeparators(result)).toBe(2);
+    });
+
+    test("keeps body content intact outside the header", () => {
+        const result = refreshEnvHeader(oldHeader + body, ".env");
+
+        expect(result.endsWith(body)).toBe(true);
+    });
+
+    test("adds a header to a file that never had one", () => {
+        const result = refreshEnvHeader(body, ".env");
+
+        expect(result.startsWith(HEADER_SEPARATOR)).toBe(true);
+        expect(result).toMatch(/^#\s+Pulled: /m);
+        expect(result.endsWith(body)).toBe(true);
+    });
+
+    test("names the file and its template in the header", () => {
+        const result = refreshEnvHeader(body, ".env.deploy.local");
+
+        expect(result).toContain(".env.deploy.local — Environment Variables");
+        expect(result).toContain("env2op .env.deploy.local");
+    });
+
+    test("strips a UTF-8 BOM so the old header is recognized", () => {
+        const result = refreshEnvHeader(`\uFEFF${oldHeader}${body}`, ".env");
+
+        expect(result).not.toContain("\uFEFF");
+        expect(countSeparators(result)).toBe(2);
     });
 });

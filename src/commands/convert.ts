@@ -1,9 +1,15 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import * as p from "@clack/prompts";
 import { ensureOpAuthenticated } from "../core/auth";
 import { parseEnvFile, validateParseResult } from "../core/env-parser";
 import { createSecureNote, createVault, editSecureNote, itemExists, vaultExists } from "../core/onepassword";
-import { generateTemplateContent, generateUsageInstructions, writeTemplate } from "../core/template-generator";
+import {
+    generateTemplateContent,
+    generateUsageInstructions,
+    refreshEnvHeader,
+    writeTemplate,
+} from "../core/template-generator";
 import type { ConvertOptions, CreateItemResult } from "../core/types";
 import { getCliVersion } from "../lib/update";
 import { handleCommandError } from "../utils/error-handler";
@@ -162,6 +168,11 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             );
             writeTemplate(templateContent, templatePath);
             logger.success(`Generated template: ${templatePath}`);
+
+            // The vault now holds this file's values, so refresh its Pulled stamp —
+            // freshness checks would otherwise flag the file as stale against its own push
+            writeFileSync(envFile, refreshEnvHeader(readFileSync(envFile, "utf-8"), basename(envFile)), "utf-8");
+            logger.success(`Marked ${basename(envFile)} as in sync with 1Password`);
         }
 
         // Step 4: Show usage instructions

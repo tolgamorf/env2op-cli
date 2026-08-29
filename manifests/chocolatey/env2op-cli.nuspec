@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>env2op-cli</id>
-    <version>0.2.9</version>
+    <version>0.2.10</version>
     <title>env2op CLI</title>
     <authors>Tolga O.</authors>
     <owners>tolgamorf</owners>
@@ -22,7 +22,7 @@
 - `env2op` - Push .env to 1Password, generate .env.tpl template
 - `op2env` - Pull secrets from 1Password using .env.tpl template
 ]]></description>
-    <releaseNotes>https://github.com/tolgamorf/env2op-cli/releases/tag/v0.2.9</releaseNotes>
+    <releaseNotes>https://github.com/tolgamorf/env2op-cli/releases/tag/v0.2.10</releaseNotes>
     <copyright>Copyright 2026 Tolga O.</copyright>
     <dependencies>
       <dependency id="1password-cli" />

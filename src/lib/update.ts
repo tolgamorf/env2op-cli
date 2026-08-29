@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import pkg from "../../package.json";
 import { exec } from "../utils/shell";
 import { detectPackageManager, type PackageManagerInfo } from "./package-manager";
 
@@ -37,14 +38,8 @@ export interface UpdateResult {
  * Get CLI version from package.json
  */
 export function getCliVersion(): string {
-    try {
-        // Dynamic import would be cleaner but we need sync access
-        // The version is embedded at build time via bunup
-        const pkg = require("../../package.json");
-        return pkg.version ?? "0.0.0";
-    } catch {
-        return "0.0.0";
-    }
+    // The version is embedded at build time via bunup (static JSON import)
+    return pkg.version ?? "0.0.0";
 }
 
 /**

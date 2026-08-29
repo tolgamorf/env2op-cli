@@ -1,0 +1,145 @@
+// SHARED ACROSS HETGE REPOS. This file is byte-identical in every hetge repo that runs Biome. It is
+// the whole house style: formatter, language settings, assists and the lint rule set. Change it in
+// one repo, then copy it to all the others; never fork it.
+//
+// The repo-specific part lives in the sibling `biome.json`, which `extends` this file and holds only
+// what genuinely differs per repo: `files.includes` (generated code, vendored blobs) and the rare
+// deliberate rule override. Note that `extends` REPLACES arrays rather than merging them, so a repo
+// that needs its own `overrides` must repeat the shared entries below alongside its own.
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 4,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "bracketSpacing": true,
+      "arrowParentheses": "always"
+    }
+  },
+  "json": {
+    "formatter": {
+      "indentWidth": 2
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
+    },
+    "linter": {
+      "enabled": false
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "types": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "useTemplate": "error",
+        "noUnusedTemplateLiteral": "error",
+        "useConst": "error",
+        "useSpreadOverApply": "error",
+        "noNamespace": "error",
+        "noCommonJs": "error",
+        "useAsConstAssertion": "error",
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["kebab-case"]
+          }
+        }
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "error",
+        "useExhaustiveDependencies": "warn",
+        "noNestedComponentDefinitions": "error",
+        "noNextAsyncClientComponent": "error",
+        "noBeforeInteractiveScriptOutsideDocument": "error"
+      },
+      "performance": {
+        "noSyncScripts": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn",
+        "noVar": "error",
+        "noUnusedExpressions": "warn",
+        // Template placeholders inside plain strings are deliberate in this codebase (shell/1Password/Dokploy
+        // `${VAR}` syntax that is NOT meant to interpolate), so the rule is only noise here.
+        "noTemplateCurlyInString": "off"
+      },
+      "complexity": {
+        "noForEach": "off"
+      },
+      "a11y": {
+        "useKeyWithClickEvents": "off",
+        "noSvgWithoutTitle": "warn",
+        "useButtonType": "warn",
+        "noLabelWithoutControl": "warn"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "useAwaitThenable": "error",
+        "useSortedClasses": {
+          "level": "error",
+          "fix": "safe",
+          "options": {
+            "attributes": ["className"],
+            "functions": ["cn"]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      // `expect(result!.field)` is the idiom in test files; the assertion is the point of the test.
+      "includes": ["**/__tests__/**", "**/*.test.*"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      // `declare global { namespace NodeJS { ... } }` is the only way to augment ambient types.
+      "includes": ["**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNamespace": "off"
+          }
+        }
+      }
+    }
+  ]
+}

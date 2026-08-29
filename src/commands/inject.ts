@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { ensureOpAuthenticated } from "../core/auth";
 import { stripHeaders } from "../core/env-parser";
+import { maskSecretRefsInComments, unmaskSecretRefs } from "../core/secret-refs";
 import { refreshEnvHeader } from "../core/template-generator";
 import type { InjectOptions } from "../core/types";
 import { getCliVersion } from "../lib/update";
@@ -9,7 +10,7 @@ import { handleCommandError } from "../utils/error-handler";
 import { errors } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { confirmOrExit } from "../utils/prompts";
-import { exec } from "../utils/shell";
+import { execWithStdin } from "../utils/shell";
 import { withMinTime } from "../utils/timing";
 
 /**
@@ -66,13 +67,21 @@ export async function runInject(options: InjectOptions): Promise<void> {
         }
 
         // Step 4: Run op inject
+        // Piped through stdin rather than -i/-o so comments that merely mention
+        // `op://` can be masked before op sees them (see core/secret-refs.ts).
         // Don't use spinner in verbose mode - it interferes with command output
         const spinner = verbose ? null : logger.spinner();
         spinner?.start("Pulling secrets from 1Password...");
 
         try {
+            const template = maskSecretRefsInComments(readFileSync(templateFile, "utf-8"));
             const result = await withMinTime(
-                exec("op", ["inject", "-i", templateFile, "-o", outputPath, "-f"], { verbose }),
+                execWithStdin("op", ["inject"], {
+                    stdin: template.text,
+                    verbose,
+                    // stdout is the resolved .env - never echo it to the terminal
+                    echoStdout: false,
+                }),
             );
 
             if (result.exitCode !== 0) {
@@ -80,7 +89,7 @@ export async function runInject(options: InjectOptions): Promise<void> {
             }
 
             // Strip any existing headers and prepend fresh .env header
-            const rawContent = readFileSync(outputPath, "utf-8");
+            const rawContent = unmaskSecretRefs(result.stdout, template.mask);
             const envContent = stripHeaders(rawContent);
             writeFileSync(outputPath, refreshEnvHeader(rawContent, basename(outputPath)), "utf-8");
 

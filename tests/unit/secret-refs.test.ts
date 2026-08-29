@@ -61,6 +61,14 @@ describe("maskSecretRefsInComments", () => {
         expect(maskSecretRefsInComments(template).text).toBe(template);
     });
 
+    test("reports changed only when something was masked", () => {
+        // op is handed the original template untouched when nothing needs
+        // masking, so this flag decides whether a scratch file is written.
+        expect(maskSecretRefsInComments("# op:// mention\nFOO=bar\n").changed).toBe(true);
+        expect(maskSecretRefsInComments(`# plain comment\nNODE_ENV=${REF}\n`).changed).toBe(false);
+        expect(maskSecretRefsInComments("FOO=bar\n").changed).toBe(false);
+    });
+
     test("preserves line count and trailing newline", () => {
         const template = "# op:// mention\nFOO=bar\n";
         const { text } = maskSecretRefsInComments(template);

@@ -10,11 +10,6 @@ interface ExecResult {
 
 interface ExecOptions {
     verbose?: boolean;
-    /**
-     * Echo captured stdout in verbose mode. Turn off when stdout carries
-     * resolved secrets, which must never reach the terminal.
-     */
-    echoStdout?: boolean;
 }
 
 function quoteArg(arg: string): string {
@@ -27,7 +22,7 @@ function quoteArg(arg: string): string {
 /**
  * Collect stdout/stderr from a child process and resolve when complete
  */
-function collectOutput(proc: ChildProcess, verbose: boolean, echoStdout = true): Promise<ExecResult> {
+function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult> {
     return new Promise((resolve) => {
         const stdoutChunks: string[] = [];
         const stderrChunks: string[] = [];
@@ -35,7 +30,7 @@ function collectOutput(proc: ChildProcess, verbose: boolean, echoStdout = true):
         proc.stdout?.on("data", (data: Buffer | string) => {
             const text = Buffer.isBuffer(data) ? data.toString() : String(data);
             stdoutChunks.push(text);
-            if (verbose && echoStdout) {
+            if (verbose) {
                 process.stdout.write(text);
             }
         });
@@ -71,7 +66,7 @@ function collectOutput(proc: ChildProcess, verbose: boolean, echoStdout = true):
  * Execute a shell command and return the result
  */
 export async function exec(command: string, args: string[] = [], options: ExecOptions = {}): Promise<ExecResult> {
-    const { verbose = false, echoStdout = true } = options;
+    const { verbose = false } = options;
     const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
 
     if (verbose) {
@@ -82,7 +77,7 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
         stdio: ["ignore", "pipe", "pipe"],
     });
 
-    return collectOutput(proc, verbose, echoStdout);
+    return collectOutput(proc, verbose);
 }
 
 /**
@@ -122,7 +117,7 @@ export async function execWithStdin(
     args: string[] = [],
     options: ExecWithStdinOptions,
 ): Promise<ExecResult> {
-    const { stdin: stdinContent, verbose = false, echoStdout = true } = options;
+    const { stdin: stdinContent, verbose = false } = options;
 
     if (verbose) {
         const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
@@ -136,5 +131,5 @@ export async function execWithStdin(
     proc.stdin?.write(stdinContent);
     proc.stdin?.end();
 
-    return collectOutput(proc, verbose, echoStdout);
+    return collectOutput(proc, verbose);
 }

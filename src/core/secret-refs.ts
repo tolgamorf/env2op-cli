@@ -29,6 +29,8 @@ export interface MaskedTemplate {
     text: string;
     /** The token that replaced the prefix - pass it back to unmaskSecretRefs. */
     mask: string;
+    /** Whether anything was actually masked. */
+    changed: boolean;
 }
 
 /**
@@ -63,7 +65,7 @@ export function maskSecretRefsInComments(template: string): MaskedTemplate {
         .map((line) => (line.trimStart().startsWith("#") ? line.replaceAll(PREFIX, mask) : line))
         .join("\n");
 
-    return { text, mask };
+    return { text, mask, changed: text !== template };
 }
 
 /** Restore the masked prefix in op's output. */

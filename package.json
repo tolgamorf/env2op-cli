@@ -27,11 +27,12 @@
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
+    "lint": "biome lint . && node scripts/check-folder-names.mjs",
+    "lint:fix": "biome lint --write . && node scripts/check-folder-names.mjs",
+    "format": "biome format --write .",
+    "format:check": "biome format . && biome lint .",
+    "check": "biome check --write --unsafe . && node scripts/check-folder-names.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "bunx biome check . && node scripts/check-folder-names.mjs",
-    "lint:fix": "bunx biome check . --write && node scripts/check-folder-names.mjs",
-    "format": "bunx biome format --write .",
-    "format:check": "bunx biome format .",
     "prepublishOnly": "bun run build",
     "release": "bun run scripts/release.ts",
     "build:windows": "bun build --compile --target=bun-windows-x64 src/cli.ts --outfile dist/env2op.exe && bun build --compile --target=bun-windows-x64 src/op2env-cli.ts --outfile dist/op2env.exe"
@@ -71,10 +72,10 @@
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.10",
+    "@biomejs/biome": "2.5.11",
     "@tsconfig/bun": "^1.0.11",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.0",
     "bunup": "^0.16.32",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }

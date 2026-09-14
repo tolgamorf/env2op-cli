@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { errors } from "../utils/errors";
 import { exec, execWithStdin } from "../utils/shell";
-import type { CreateItemOptions, CreateItemResult, EditItemOptions } from "./types";
+import { type CreateItemOptions, type CreateItemResult, type EditItemOptions, SecretType } from "./types";
 
 interface VerboseOption {
     verbose?: boolean;
@@ -110,14 +110,39 @@ interface OpFieldsTemplate {
 }
 
 /**
+ * Substrings that mark a variable name as sensitive under `--secret=auto`.
+ * Matched against the lowercased name, so compounds like API_KEY or
+ * CLIENT_SECRET are already covered by "key" and "secret".
+ */
+const PASSWORD_DETECTION_WORDS = ["token", "cert", "key", "password", "encryption", "secret", "credential"];
+
+/**
+ * Decide whether a field is stored concealed (password) or visible (text).
+ */
+export function determineFieldType(key: string, secretOption: SecretType): "STRING" | "CONCEALED" {
+    switch (secretOption) {
+        case SecretType.password:
+            return "CONCEALED";
+        case SecretType.auto: {
+            const lowerKey = key.toLowerCase();
+            return PASSWORD_DETECTION_WORDS.some((word) => lowerKey.includes(word)) ? "CONCEALED" : "STRING";
+        }
+        default:
+            return "STRING";
+    }
+}
+
+/**
  * Build JSON template containing only fields for 1Password item.
  * Metadata (title, vault, category) is passed via CLI flags.
  */
-function buildFieldsTemplate(fields: Array<{ key: string; value: string }>, secret: boolean): OpFieldsTemplate {
-    const fieldType = secret ? "CONCEALED" : "STRING";
+function buildFieldsTemplate(
+    fields: Array<{ key: string; value: string }>,
+    secretOption: SecretType,
+): OpFieldsTemplate {
     return {
         fields: fields.map(({ key, value }) => ({
-            type: fieldType,
+            type: determineFieldType(key, secretOption),
             label: key,
             value,
         })),
@@ -136,13 +161,13 @@ function buildFullTemplate(
     title: string,
     vault: string,
     fields: Array<{ key: string; value: string }>,
-    secret: boolean,
+    secretOption: SecretType,
 ): OpFieldsTemplate & { title: string; vault: { name: string }; category: string } {
     return {
         title,
         vault: { name: vault },
         category: "SECURE_NOTE",
-        ...buildFieldsTemplate(fields, secret),
+        ...buildFieldsTemplate(fields, secretOption),
     };
 }
 

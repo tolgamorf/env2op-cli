@@ -10,7 +10,7 @@ import {
     refreshEnvHeader,
     writeTemplate,
 } from "../core/template-generator";
-import type { ConvertOptions, CreateItemResult } from "../core/types";
+import { type ConvertOptions, type CreateItemResult, SECRET_TYPE_LABELS } from "../core/types";
 import { getCliVersion } from "../lib/update";
 import { handleCommandError } from "../utils/error-handler";
 import { logger } from "../utils/logger";
@@ -58,7 +58,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.warn("Would push to 1Password:");
             logger.keyValue("Vault", vault);
             logger.keyValue("Title", itemName);
-            logger.keyValue("Type", secret ? "password (hidden)" : "text (visible)");
+            logger.keyValue("Type", SECRET_TYPE_LABELS[secret]);
             logger.keyValue("Fields", logger.formatFields(variables.map((v) => v.key)));
         } else {
             // Check 1Password CLI and authenticate

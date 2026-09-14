@@ -33,6 +33,33 @@ export interface ParseResult {
 }
 
 /**
+ * How env values are stored in the 1Password item
+ */
+export enum SecretType {
+    /** Every field is a visible text field */
+    text = "text",
+    /** Every field is a concealed password field */
+    password = "password",
+    /** Concealed or visible per field, based on the variable name */
+    auto = "auto",
+}
+
+/** Human-readable description of each secret type, used in CLI output */
+export const SECRET_TYPE_LABELS: Record<SecretType, string> = {
+    [SecretType.text]: "text (visible)",
+    [SecretType.password]: "password (hidden)",
+    [SecretType.auto]: "auto detect (hidden or visible)",
+};
+
+/**
+ * Parse a `--secret` option value into a SecretType.
+ * Returns null for unrecognised values so callers can report the error.
+ */
+export function parseSecretType(value: string): SecretType | null {
+    return Object.values(SecretType).includes(value as SecretType) ? (value as SecretType) : null;
+}
+
+/**
  * Options for creating a 1Password Secure Note
  */
 export interface CreateItemOptions {
@@ -42,8 +69,8 @@ export interface CreateItemOptions {
     title: string;
     /** Fields to store */
     fields: EnvVariable[];
-    /** Store as password type (hidden) instead of text (visible) */
-    secret: boolean;
+    /** Store all as password type (hidden) or text (visible) or detect from environment variable name */
+    secret: SecretType;
 }
 
 /**
@@ -84,8 +111,8 @@ export interface ConvertOptions {
     output?: string;
     /** Preview mode - don't make changes */
     dryRun: boolean;
-    /** Store all fields as password type */
-    secret: boolean;
+    /** Store fields as text or password type, or auto-detect from environment variable name */
+    secret: SecretType;
     /** Skip confirmation prompts */
     force: boolean;
     /** Show op CLI output */

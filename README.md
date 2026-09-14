@@ -129,7 +129,10 @@ env2op .env Personal "MyApp" -o secrets.tpl
 env2op .env.production Personal "MyApp" --dry-run
 
 # Store all fields as password type (hidden in 1Password)
-env2op .env.production Personal "MyApp" --secret
+env2op .env.production Personal "MyApp" --secret=password
+
+# Conceal only the fields whose name looks secret (API_KEY, DB_PASSWORD, ...)
+env2op .env.production Personal "MyApp" --secret=auto
 
 # Skip confirmation prompts (useful for scripts/CI)
 env2op .env.production Personal "MyApp" -f
@@ -137,16 +140,16 @@ env2op .env.production Personal "MyApp" -f
 
 ### Options for env2op
 
-| Flag            | Description                                           |
-|----------------:|-------------------------------------------------------|
-| `-o, --output`  | Output template path (default: `<env_file>.tpl`)      |
-| `-f, --force`   | Skip confirmation prompts                             |
-| `--dry-run`     | Preview actions without executing                     |
-| `--secret`      | Store all fields as 'password' type (default: 'text') |
-| `--verbose`     | Show op CLI output                                    |
-| `--update`      | Check for and install updates                         |
-| `-v, --version` | Show version                                          |
-| `-h, --help`    | Show help                                             |
+| Flag              | Description                                                   |
+|------------------:|---------------------------------------------------------------|
+| `-o, --output`    | Output template path (default: `<env_file>.tpl`)              |
+| `-f, --force`     | Skip confirmation prompts                                     |
+| `--dry-run`       | Preview actions without executing                             |
+| `--secret=<type>` | Field type: `text` (default), `password`, or `auto`           |
+| `--verbose`       | Show op CLI output                                            |
+| `--update`        | Check for and install updates                                 |
+| `-v, --version`   | Show version                                                  |
+| `-h, --help`      | Show help                                                     |
 
 ## op2env (Pull)
 
@@ -197,7 +200,15 @@ op run --env-file .env.tpl -- npm start
 
 ## Field Types
 
-By default, all fields are stored as `text` type (visible in 1Password). Use `--secret` to store them as `password` type (hidden by default, revealed on click).
+By default, all fields are stored as `text` type (visible in 1Password). Use `--secret` to change that:
+
+| Value               | Behaviour                                                                                                   |
+|--------------------:|-------------------------------------------------------------------------------------------------------------|
+| `--secret=text`     | All fields are `text` (visible). The default.                                                               |
+| `--secret=password` | All fields are `password` (hidden by default, revealed on click).                                           |
+| `--secret=auto`     | Fields whose name contains `token`, `cert`, `key`, `password`, `encryption`, `secret` or `credential` are stored as `password`; the rest as `text`. |
+
+Bare `--secret` is accepted as a shorthand for `--secret=password`.
 
 ## Example
 

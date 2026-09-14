@@ -9,13 +9,23 @@ export interface ParsedArgs {
 }
 
 /**
+ * Arguments that take a value, mapped to the key they are stored under in `options`
+ */
+const VALUE_OPTIONS: Record<string, string> = {
+    "-o": "output",
+    "--output": "output",
+    "--secret": "secret",
+};
+
+/**
  * Parse CLI arguments into flags, positional args, and options
  *
  * Handles:
  * - Long flags: --flag (added to flags as "flag")
  * - Short flags: -f (added to flags as "f")
  * - Combined short flags: -abc (added as "a", "b", "c")
- * - Options with values: -o value, --output value
+ * - Options with values: -o value, --output value, --output=value
+ * - Value options used without a value: recorded as a flag instead (e.g. bare --secret)
  * - Positional arguments: anything not starting with -
  */
 export function parseArgs(args: string[]): ParsedArgs {
@@ -25,11 +35,23 @@ export function parseArgs(args: string[]): ParsedArgs {
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i] as string;
-        if (arg === "-o" || arg === "--output") {
+
+        // Split the `--option=value` form into its name and inline value
+        const equals = arg.startsWith("--") ? arg.indexOf("=") : -1;
+        const name = equals === -1 ? arg : arg.slice(0, equals);
+        const inlineValue = equals === -1 ? undefined : arg.slice(equals + 1);
+
+        const optionKey = VALUE_OPTIONS[name];
+        if (optionKey) {
             const next = args[i + 1];
-            if (next && !next.startsWith("-")) {
-                options.output = next;
+            if (inlineValue !== undefined) {
+                options[optionKey] = inlineValue;
+            } else if (next && !next.startsWith("-")) {
+                options[optionKey] = next;
                 i++; // skip next arg
+            } else {
+                // Used without a value — keep it addressable as a flag
+                flags.add(name.replace(/^--?/, ""));
             }
         } else if (arg.startsWith("--")) {
             flags.add(arg.slice(2));

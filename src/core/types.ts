@@ -43,6 +43,43 @@ export interface ParseResult {
 }
 
 /**
+ * How env values are stored in the 1Password item:
+ * - `text`: every field is a visible text field
+ * - `password`: every field is a concealed password field
+ * - `auto`: concealed or visible per field, from its name and value (see determineFieldType)
+ */
+export type SecretType = "text" | "password" | "auto";
+
+/** Every SecretType, in the order the CLI lists them */
+export const SECRET_TYPES: readonly SecretType[] = ["text", "password", "auto"];
+
+/** Human-readable description of each secret type, used in CLI output */
+export const SECRET_TYPE_LABELS: Record<SecretType, string> = {
+    text: "text (visible)",
+    password: "password (hidden)",
+    auto: "auto (hidden when the name or value looks secret)",
+};
+
+/**
+ * Parse a `--secret` option value into a SecretType.
+ * Returns null for unrecognised values so callers can report the error.
+ */
+export function parseSecretType(value: string): SecretType | null {
+    return (SECRET_TYPES as readonly string[]).includes(value) ? (value as SecretType) : null;
+}
+
+/**
+ * Normalise a `secret` option. A boolean is the form it took before SecretType existed
+ * (true: password, false: text) and is still accepted from library callers.
+ */
+export function toSecretType(secret: boolean | SecretType): SecretType {
+    if (typeof secret === "boolean") {
+        return secret ? "password" : "text";
+    }
+    return secret;
+}
+
+/**
  * Options for creating a 1Password Secure Note
  */
 export interface CreateItemOptions {
@@ -52,8 +89,8 @@ export interface CreateItemOptions {
     title: string;
     /** Fields to store */
     fields: EnvVariable[];
-    /** Store as password type (hidden) instead of text (visible) */
-    secret: boolean;
+    /** Field type; `true`/`false` are the older spelling of `"password"`/`"text"` */
+    secret: boolean | SecretType;
 }
 
 /**
@@ -94,8 +131,8 @@ export interface ConvertOptions {
     output?: string;
     /** Preview mode - don't make changes */
     dryRun: boolean;
-    /** Store all fields as password type */
-    secret: boolean;
+    /** Field type; `true`/`false` are the older spelling of `"password"`/`"text"` */
+    secret: boolean | SecretType;
     /** Skip confirmation prompts */
     force: boolean;
     /** Show op CLI output */

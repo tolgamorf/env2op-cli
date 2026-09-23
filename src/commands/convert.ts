@@ -3,14 +3,21 @@ import { basename, dirname, join } from "node:path";
 import * as p from "@clack/prompts";
 import { ensureOpAuthenticated } from "../core/auth";
 import { parseEnvFile, validateParseResult } from "../core/env-parser";
-import { createSecureNote, createVault, editSecureNote, itemExists, vaultExists } from "../core/onepassword";
+import {
+    createSecureNote,
+    createVault,
+    determineFieldType,
+    editSecureNote,
+    itemExists,
+    vaultExists,
+} from "../core/onepassword";
 import {
     generateTemplateContent,
     generateUsageInstructions,
     refreshEnvHeader,
     writeTemplate,
 } from "../core/template-generator";
-import type { ConvertOptions, CreateItemResult } from "../core/types";
+import { type ConvertOptions, type CreateItemResult, SECRET_TYPE_LABELS, toSecretType } from "../core/types";
 import { getCliVersion } from "../lib/update";
 import { handleCommandError } from "../utils/error-handler";
 import { logger } from "../utils/logger";
@@ -61,8 +68,15 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.warn("Would push to 1Password:");
             logger.keyValue("Vault", vault);
             logger.keyValue("Title", itemName);
-            logger.keyValue("Type", secret ? "password (hidden)" : "text (visible)");
+            logger.keyValue("Type", SECRET_TYPE_LABELS[toSecretType(secret)]);
             logger.keyValue("Fields", logger.formatFields(secretVariables.map((v) => v.key)));
+            if (toSecretType(secret) === "auto") {
+                // Name every field auto would hide, so the guess can be checked before pushing
+                const hidden = secretVariables
+                    .filter((v) => determineFieldType(v, "auto") === "CONCEALED")
+                    .map((v) => v.key);
+                logger.keyValue("Hidden", hidden.length > 0 ? logger.formatFields(hidden, hidden.length) : "none");
+            }
         } else {
             // Check 1Password CLI and authenticate
             await ensureOpAuthenticated({ verbose });

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createVault, getOpStatus, itemExists, vaultExists } from "../../src/core/onepassword";
+import { createVault, determineFieldType, getOpStatus, itemExists, vaultExists } from "../../src/core/onepassword";
+import { parseSecretType, SECRET_TYPES } from "../../src/core/types";
 import { Env2OpError } from "../../src/utils/errors";
 
 /**
@@ -71,5 +72,89 @@ esac`);
         process.env.PATH = binDir;
         rmSync(join(binDir, "op"));
         expect(await getOpStatus()).toBe("missing");
+    });
+});
+
+describe("determineFieldType", () => {
+    const field = (key: string, value = "x") => ({ key, value });
+
+    test("conceals every field for the password type", () => {
+        expect(determineFieldType(field("DEBUG"), "password")).toBe("CONCEALED");
+        expect(determineFieldType(field("API_KEY"), "password")).toBe("CONCEALED");
+    });
+
+    test("reveals every field for the text type", () => {
+        expect(determineFieldType(field("DEBUG"), "text")).toBe("STRING");
+        expect(determineFieldType(field("API_KEY"), "text")).toBe("STRING");
+    });
+
+    test("still accepts the boolean form library callers used before SecretType", () => {
+        expect(determineFieldType(field("DEBUG"), true)).toBe("CONCEALED");
+        expect(determineFieldType(field("API_KEY"), false)).toBe("STRING");
+    });
+
+    describe("auto", () => {
+        test.each([
+            "API_KEY",
+            "DATABASE_PASSWORD",
+            "STRIPE_SECRET_KEY",
+            "AUTH_TOKEN",
+            "TLS_CERT",
+            "ENCRYPTION_IV",
+            "DB_PASS",
+            "MYSQL_PWD",
+            "SENTRY_DSN",
+            "JWT_SIGNING_KEY",
+            "SSH_PRIVATE_KEY",
+            "GITHUB_PAT",
+            "PASSWORD_SALT",
+            "ACCESSTOKEN",
+            "CLIENTSECRET",
+            "apiKey",
+        ])("conceals %s", (key) => {
+            expect(determineFieldType(field(key), "auto")).toBe("CONCEALED");
+        });
+
+        test.each([
+            "NODE_ENV",
+            "DEBUG",
+            "DATABASE_URL",
+            "PORT",
+            "LOG_LEVEL",
+            "MONKEY_MODE",
+            "KEYBOARD_LAYOUT",
+            "CERTAIN_FLAG",
+            "PASSENGER_COUNT",
+        ])("reveals %s", (key) => {
+            expect(determineFieldType(field(key), "auto")).toBe("STRING");
+        });
+
+        test("matches regardless of case", () => {
+            expect(determineFieldType(field("api_key"), "auto")).toBe("CONCEALED");
+        });
+
+        test("conceals a URL that carries a password, whatever the name", () => {
+            expect(determineFieldType(field("DATABASE_URL", "postgres://app:s3cret@db:5432/app"), "auto")).toBe(
+                "CONCEALED",
+            );
+            expect(determineFieldType(field("REDIS_URL", "redis://:s3cret@cache:6379"), "auto")).toBe("CONCEALED");
+        });
+
+        test("reveals a URL without a password", () => {
+            expect(determineFieldType(field("DATABASE_URL", "postgres://localhost:5432/app"), "auto")).toBe("STRING");
+            expect(determineFieldType(field("API_URL", "https://user@example.com/v1"), "auto")).toBe("STRING");
+        });
+    });
+});
+
+describe("parseSecretType", () => {
+    test.each(SECRET_TYPES)("accepts %s", (value) => {
+        expect(parseSecretType(value)).toBe(value);
+    });
+
+    test("rejects unknown values", () => {
+        expect(parseSecretType("bogus")).toBeNull();
+        expect(parseSecretType("")).toBeNull();
+        expect(parseSecretType("TEXT")).toBeNull();
     });
 });

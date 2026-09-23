@@ -1,6 +1,7 @@
 import pc from "picocolors";
 import { runConvert } from "./commands/convert";
 import { runUpdate } from "./commands/update";
+import { parseSecretType, SECRET_TYPES } from "./core/types";
 import { getCliVersion, maybeShowUpdateNotification } from "./lib/update";
 import { showUpdateNotification } from "./lib/update-prompts";
 import { parseArgs } from "./utils/args";
@@ -58,6 +59,15 @@ if (positional.length < 3) {
     process.exit(1);
 }
 
+// Bare `--secret` is the legacy spelling of `--secret=password`
+const secretValue = options.secret ?? (flags.has("secret") ? "password" : "text");
+const secret = parseSecretType(secretValue);
+
+if (!secret) {
+    showInvalidSecretError(secretValue);
+    process.exit(1);
+}
+
 // All positional args present, run the command
 const [envFile, vault, itemName] = positional as [string, string, string];
 await runConvert({
@@ -66,7 +76,7 @@ await runConvert({
     itemName,
     output: options.output,
     dryRun: flags.has("dry-run"),
-    secret: flags.has("secret"),
+    secret,
     force: flags.has("f") || flags.has("force"),
     verbose: flags.has("verbose"),
 });
@@ -94,7 +104,9 @@ ${pc.bold("OPTIONS")}
   ${pc.cyan("-o, --output")}    Output template path (default: <env_file>.tpl)
   ${pc.cyan("-f, --force")}     Skip confirmation prompts
   ${pc.cyan("    --dry-run")}   Preview actions without executing
-  ${pc.cyan("    --secret")}    Store all fields as password type (hidden)
+  ${pc.cyan("    --secret")}    Field type: text (default), password, or auto
+                  ${pc.dim("auto hides fields whose name looks secret (KEY, TOKEN, PASSWORD, ...)")}
+                  ${pc.dim("or whose value is a URL with a password in it")}
   ${pc.cyan("    --verbose")}   Show op CLI output
   ${pc.cyan("    --update")}    Check for and install updates
   ${pc.cyan("-v, --version")}   Show version
@@ -111,13 +123,31 @@ ${pc.bold("EXAMPLES")}
   ${pc.cyan("$")} env2op .env Personal "MyApp" --dry-run
 
   ${pc.dim("# Store as hidden password fields")}
-  ${pc.cyan("$")} env2op .env Personal "MyApp" --secret
+  ${pc.cyan("$")} env2op .env Personal "MyApp" --secret=password
+
+  ${pc.dim("# Hide only the fields whose name looks secret")}
+  ${pc.cyan("$")} env2op .env Personal "MyApp" --secret=auto
 
   ${pc.dim("# Skip confirmation prompts (for CI/scripts)")}
   ${pc.cyan("$")} env2op .env Personal "MyApp" -f
 
 ${pc.bold("DOCUMENTATION")}
   ${pc.dim("https://github.com/tolgamorf/env2op-cli")}
+`);
+}
+
+function showInvalidSecretError(value: string): void {
+    const allowed = SECRET_TYPES.map((type) => pc.yellow(type)).join(", ");
+
+    console.log(`
+${pc.red(pc.bold("Error:"))} Invalid value for ${pc.cyan("--secret")}: ${pc.yellow(value)}
+
+${pc.bold("Expected one of:")} ${allowed}
+
+${pc.bold("Example:")}
+  ${pc.cyan("$")} env2op .env.production Personal "MyApp" --secret=auto
+
+Run ${pc.cyan("env2op --help")} for more information.
 `);
 }
 

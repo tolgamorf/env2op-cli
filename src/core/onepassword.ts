@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { errors } from "../utils/errors";
 import { exec, execWithStdin } from "../utils/shell";
-import type { CreateItemOptions, CreateItemResult, EditItemOptions } from "./types";
+import {
+    type CreateItemOptions,
+    type CreateItemResult,
+    type EditItemOptions,
+    type SecretType,
+    toSecretType,
+} from "./types";
 
 interface VerboseOption {
     verbose?: boolean;
@@ -131,14 +137,91 @@ interface OpFieldsTemplate {
 }
 
 /**
+ * Words that mark a variable name as sensitive under `--secret=auto`. They are matched
+ * against whole parts of the name (API_KEY is `api` + `key`, apiKey likewise), so `key`
+ * catches API_KEY but not MONKEY, and `cert` catches TLS_CERT but not CERTAIN_FLAG.
+ */
+const SECRET_NAME_PARTS = new Set([
+    "apikey",
+    "cert",
+    "certificate",
+    "credential",
+    "credentials",
+    "dsn",
+    "encryption",
+    "jwt",
+    "key",
+    "keys",
+    "pass",
+    "passphrase",
+    "passwd",
+    "password",
+    "pat",
+    "private",
+    "privatekey",
+    "pwd",
+    "salt",
+    "secret",
+    "secretkey",
+    "secrets",
+    "signature",
+    "signing",
+    "token",
+    "tokens",
+]);
+
+/**
+ * Longer words also caught at the end of a run-together part, as in ACCESSTOKEN or
+ * CLIENTSECRET. Short words are left out: `key` would match MONKEY.
+ */
+const SECRET_NAME_SUFFIXES = ["token", "secret", "password", "passwd", "credential", "apikey"];
+
+/** A URL carrying a password in its userinfo, as in postgres://user:pass@host/db */
+const URL_WITH_PASSWORD = /^[a-z][a-z0-9+.-]*:\/\/[^\s/@:]*:[^\s/@]+@/i;
+
+function nameLooksSecret(key: string): boolean {
+    const parts = key
+        .replace(/([a-z])([A-Z])/g, "$1_$2")
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter(Boolean);
+    return parts.some(
+        (part) => SECRET_NAME_PARTS.has(part) || SECRET_NAME_SUFFIXES.some((suffix) => part.endsWith(suffix)),
+    );
+}
+
+/**
+ * Decide whether a field is stored concealed (password) or visible (text).
+ *
+ * Under `auto`, a field is concealed when its name looks secret or its value is a URL with a
+ * password in it, so DATABASE_URL=postgres://user:pass@host is hidden while
+ * DATABASE_URL=postgres://localhost/app stays readable.
+ */
+export function determineFieldType(
+    field: { key: string; value: string },
+    secret: boolean | SecretType,
+): "STRING" | "CONCEALED" {
+    switch (toSecretType(secret)) {
+        case "password":
+            return "CONCEALED";
+        case "auto":
+            return nameLooksSecret(field.key) || URL_WITH_PASSWORD.test(field.value) ? "CONCEALED" : "STRING";
+        default:
+            return "STRING";
+    }
+}
+
+/**
  * Build JSON template containing only fields for 1Password item.
  * Metadata (title, vault, category) is passed via CLI flags.
  */
-function buildFieldsTemplate(fields: Array<{ key: string; value: string }>, secret: boolean): OpFieldsTemplate {
-    const fieldType = secret ? "CONCEALED" : "STRING";
+function buildFieldsTemplate(
+    fields: Array<{ key: string; value: string }>,
+    secretOption: boolean | SecretType,
+): OpFieldsTemplate {
     return {
         fields: fields.map(({ key, value }) => ({
-            type: fieldType,
+            type: determineFieldType({ key, value }, secretOption),
             label: key,
             value,
         })),
@@ -157,13 +240,13 @@ function buildFullTemplate(
     title: string,
     vault: string,
     fields: Array<{ key: string; value: string }>,
-    secret: boolean,
+    secretOption: boolean | SecretType,
 ): OpFieldsTemplate & { title: string; vault: { name: string }; category: string } {
     return {
         title,
         vault: { name: vault },
         category: "SECURE_NOTE",
-        ...buildFieldsTemplate(fields, secret),
+        ...buildFieldsTemplate(fields, secretOption),
     };
 }
 

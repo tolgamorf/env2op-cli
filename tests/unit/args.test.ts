@@ -73,9 +73,13 @@ describe("parseArgs value options", () => {
         expect(options.output).toBe("secrets.tpl");
     });
 
-    test("reads --secret in both forms", () => {
+    test("reads a --secret value only in the equals form", () => {
         expect(parseArgs(["--secret=auto"], ALL_FLAGS).options.secret).toBe("auto");
-        expect(parseArgs(["--secret", "auto"], ALL_FLAGS).options.secret).toBe("auto");
+        // Space-separated, the word after a bare --secret stays positional
+        const { flags, options, positional } = parseArgs(["--secret", "auto"], ALL_FLAGS);
+        expect(options.secret).toBeUndefined();
+        expect(flags.has("secret")).toBe(true);
+        expect(positional).toEqual(["auto"]);
     });
 
     test("keeps a value only up to the first equals sign", () => {
@@ -97,7 +101,18 @@ describe("parseArgs value options", () => {
     });
 
     test("does not treat an option value as positional", () => {
-        const { positional } = parseArgs([".env", "Personal", "MyApp", "--secret", "password"], ALL_FLAGS);
+        const { positional } = parseArgs([".env", "Personal", "MyApp", "--secret=password"], ALL_FLAGS);
         expect(positional).toEqual([".env", "Personal", "MyApp"]);
+    });
+
+    test("does not swallow the .env path after a bare --secret", () => {
+        // Scripts that put --secret before the arguments kept working before --secret took a value
+        const { flags, positional } = parseArgs(["--secret", ".env", "Personal", "MyApp"], ALL_FLAGS);
+        expect(flags.has("secret")).toBe(true);
+        expect(positional).toEqual([".env", "Personal", "MyApp"]);
+    });
+
+    test("reports --secret= with an empty value", () => {
+        expect(parseArgs(["--secret="], ALL_FLAGS).errors).toEqual(["--secret requires a value"]);
     });
 });

@@ -20,7 +20,10 @@ const VALUE_OPTIONS: Record<string, string> = {
 };
 
 /**
- * Value options that may also be used bare, as a flag (bare `--secret` means `--secret=password`)
+ * Value options that may also be used bare, as a flag (bare `--secret` means `--secret=password`).
+ * These take a value only in the `--option=value` form: bare `--secret` came first, so a
+ * space-separated value would swallow whatever follows it, e.g. the `.env` path in
+ * `env2op --secret .env Vault Item`.
  */
 const FLAG_WHEN_BARE = new Set(["--secret"]);
 
@@ -32,7 +35,7 @@ const FLAG_WHEN_BARE = new Set(["--secret"]);
  * - Short flags: -f (added to flags as "f")
  * - Combined short flags: -abc (added as "a", "b", "c")
  * - Options with values: -o value, --output value, --output=value
- * - Value options used without a value: recorded as a flag instead (e.g. bare --secret)
+ * - Bare-flag options: --secret (a flag) or --secret=value, never --secret value
  * - Positional arguments: anything not starting with -
  *
  * A flag not in `knownFlags` is reported in `errors` rather than ignored, so a typo
@@ -66,7 +69,7 @@ export function parseArgs(args: string[], knownFlags: readonly string[]): Parsed
             const next = args[i + 1];
             if (inlineValue) {
                 options[optionKey] = inlineValue;
-            } else if (inlineValue === undefined && next && !next.startsWith("-")) {
+            } else if (inlineValue === undefined && !FLAG_WHEN_BARE.has(name) && next && !next.startsWith("-")) {
                 options[optionKey] = next;
                 i++; // skip next arg
             } else if (inlineValue === undefined && FLAG_WHEN_BARE.has(name)) {

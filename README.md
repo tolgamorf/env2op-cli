@@ -201,6 +201,14 @@ Both commands check for a new version at most once a day and mention it when one
 `ENV2OP_NO_UPDATE_CHECK=1` to turn that off (no request, no notice), for example where env2op is
 bundled at a pinned version. `--update` still works.
 
+### Exit codes
+
+| Code | Meaning |
+|-----:|---------|
+| `0`  | Done: the push or pull completed |
+| `1`  | Failed |
+| `2`  | Declined: a confirmation prompt was answered No or cancelled (Ctrl-C, Escape), or there was no terminal to answer it. Nothing was written. Pass `-f`/`--force` to skip the prompts in scripts |
+
 ## How It Works
 
 1. **env2op** parses your `.env` file, creates a 1Password Secure Note, and generates a `.tpl` template

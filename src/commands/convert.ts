@@ -21,7 +21,7 @@ import { type ConvertOptions, type CreateItemResult, SECRET_TYPE_LABELS, toSecre
 import { getCliVersion } from "../lib/update";
 import { handleCommandError } from "../utils/error-handler";
 import { logger } from "../utils/logger";
-import { confirmOrExit } from "../utils/prompts";
+import { confirm, confirmOrExit, exitDeclined } from "../utils/prompts";
 import { withMinTime } from "../utils/timing";
 
 /**
@@ -98,14 +98,8 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                     vaultSpinner.stop(`Vault "${vault}" not found`);
 
                     // Ask for confirmation to create vault
-                    const shouldCreate = await p.confirm({
-                        message: `Vault "${vault}" does not exist. Create it?`,
-                    });
-
-                    if (p.isCancel(shouldCreate) || !shouldCreate) {
-                        logger.cancel("Operation cancelled");
-                        logger.info('Run "op vault list" to see available vaults');
-                        process.exit(0);
+                    if (!(await confirm(`Vault "${vault}" does not exist. Create it?`))) {
+                        exitDeclined('Run "op vault list" to see available vaults');
                     }
 
                     const createSpinner = p.spinner();

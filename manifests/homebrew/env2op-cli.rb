@@ -1,8 +1,8 @@
 class Env2opCli < Formula
   desc "Push .env files to 1Password and pull them back"
   homepage "https://github.com/tolgamorf/env2op-cli"
-  url "https://registry.npmjs.org/@tolgamorf/env2op-cli/-/env2op-cli-0.3.0.tgz"
-  sha256 "5597c50203e8ffc6cda594f96c5e77cce9bdde07d8b67fae2de63dce45cde924"
+  url "https://registry.npmjs.org/@tolgamorf/env2op-cli/-/env2op-cli-0.3.1.tgz"
+  sha256 "93b4fa612ee75aa19fe96e37afc72e505b1959c10d1dc5a4b8f0160bcf8c2d93"
   license "MIT"
 
   depends_on "node"

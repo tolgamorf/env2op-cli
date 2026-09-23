@@ -3,12 +3,12 @@ import { Env2OpError, ErrorCodes, errors } from "../../src/utils/errors";
 
 describe("Env2OpError", () => {
     test("is an instance of Error", () => {
-        const error = new Env2OpError("test message", ErrorCodes.PARSE_ERROR);
+        const error = new Env2OpError("test message", ErrorCodes.INJECT_FAILED);
         expect(error).toBeInstanceOf(Error);
     });
 
     test("has correct name", () => {
-        const error = new Env2OpError("test message", ErrorCodes.PARSE_ERROR);
+        const error = new Env2OpError("test message", ErrorCodes.INJECT_FAILED);
         expect(error.name).toBe("Env2OpError");
     });
 
@@ -18,12 +18,12 @@ describe("Env2OpError", () => {
     });
 
     test("stores suggestion when provided", () => {
-        const error = new Env2OpError("test", ErrorCodes.PARSE_ERROR, "try this");
+        const error = new Env2OpError("test", ErrorCodes.INJECT_FAILED, "try this");
         expect(error.suggestion).toBe("try this");
     });
 
     test("suggestion is undefined when not provided", () => {
-        const error = new Env2OpError("test", ErrorCodes.PARSE_ERROR);
+        const error = new Env2OpError("test", ErrorCodes.INJECT_FAILED);
         expect(error.suggestion).toBeUndefined();
     });
 });
@@ -66,24 +66,17 @@ describe("error factory functions", () => {
         expect(error.message).toContain("permission denied");
     });
 
-    test("itemExists creates correct error", () => {
-        const error = errors.itemExists("MyApp", "Personal");
-        expect(error.code).toBe("ITEM_EXISTS");
-        expect(error.message).toContain("MyApp");
-        expect(error.message).toContain("Personal");
-    });
-
     test("itemCreateFailed creates correct error", () => {
         const error = errors.itemCreateFailed("network error");
         expect(error.code).toBe("ITEM_CREATE_FAILED");
         expect(error.message).toContain("network error");
     });
 
-    test("parseError creates correct error", () => {
-        const error = errors.parseError(5, "invalid format");
-        expect(error.code).toBe("PARSE_ERROR");
-        expect(error.message).toContain("5");
-        expect(error.message).toContain("invalid format");
+    test("opCommandFailed creates correct error", () => {
+        const error = errors.opCommandFailed("list vaults", "session expired");
+        expect(error.code).toBe("OP_COMMAND_FAILED");
+        expect(error.message).toContain("list vaults");
+        expect(error.message).toContain("session expired");
     });
 });
 
@@ -95,9 +88,8 @@ describe("ErrorCodes", () => {
         expect(ErrorCodes.OP_NOT_SIGNED_IN).toBe("OP_NOT_SIGNED_IN");
         expect(ErrorCodes.VAULT_NOT_FOUND).toBe("VAULT_NOT_FOUND");
         expect(ErrorCodes.VAULT_CREATE_FAILED).toBe("VAULT_CREATE_FAILED");
-        expect(ErrorCodes.ITEM_EXISTS).toBe("ITEM_EXISTS");
         expect(ErrorCodes.ITEM_CREATE_FAILED).toBe("ITEM_CREATE_FAILED");
-        expect(ErrorCodes.PARSE_ERROR).toBe("PARSE_ERROR");
+        expect(ErrorCodes.OP_COMMAND_FAILED).toBe("OP_COMMAND_FAILED");
         expect(ErrorCodes.TEMPLATE_NOT_FOUND).toBe("TEMPLATE_NOT_FOUND");
         expect(ErrorCodes.INJECT_FAILED).toBe("INJECT_FAILED");
     });

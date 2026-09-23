@@ -163,7 +163,6 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                 {
                     vaultId: itemResult.vaultId,
                     itemId: itemResult.id,
-                    variables,
                     lines,
                     fieldIds: itemResult.fieldIds,
                 },

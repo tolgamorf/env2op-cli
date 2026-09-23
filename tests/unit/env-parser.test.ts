@@ -56,6 +56,37 @@ describe("parseEnvFile", () => {
             expect(withHash?.value).toBe("value # not a comment");
         });
 
+        test("records which quote wrapped a value on its line", async () => {
+            const result = await parseEnvFile(join(fixturesDir, "quoted-values.env"));
+            const quoteOf = (key: string) => {
+                const line = result.lines.find((l) => l.type === "variable" && l.key === key);
+                return line?.type === "variable" ? line.quote : "missing";
+            };
+            expect(quoteOf("DOUBLE_WITH_HASH")).toBe('"');
+            expect(quoteOf("SINGLE_QUOTED")).toBe("'");
+            expect(quoteOf("UNQUOTED")).toBeUndefined();
+        });
+
+        test("reads a quoted value up to the quote that ends the line, as dotenv does", async () => {
+            const result = await parseEnvFile(join(fixturesDir, "quoted-values.env"));
+            const valueFor = (key: string) => result.variables.find((v) => v.key === key)?.value;
+            expect(valueFor("DOUBLE_WITH_INNER_QUOTES")).toBe('{"x":1}');
+            expect(valueFor("SINGLE_WITH_INNER_QUOTES")).toBe("it's");
+            // A quote inside the comment does not extend the value
+            expect(valueFor("DOUBLE_THEN_QUOTED_COMMENT")).toBe("a");
+        });
+
+        test("keeps a variable line's inline comment as written", async () => {
+            const result = await parseEnvFile(join(fixturesDir, "quoted-values.env"));
+            const commentOf = (key: string) => {
+                const line = result.lines.find((l) => l.type === "variable" && l.key === key);
+                return line?.type === "variable" ? line.inlineComment : "missing";
+            };
+            expect(commentOf("DOUBLE_THEN_QUOTED_COMMENT")).toBe(' # say "hi"');
+            expect(commentOf("EMPTY_WITH_COMMENT")).toBe("  # empty on purpose");
+            expect(commentOf("UNQUOTED")).toBeUndefined();
+        });
+
         test("handles empty quoted values", async () => {
             const result = await parseEnvFile(join(fixturesDir, "quoted-values.env"));
             const emptyDouble = result.variables.find((v) => v.key === "DOUBLE_EMPTY");

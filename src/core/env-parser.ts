@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { errors } from "../utils/errors";
 import { HEADER_SEPARATOR } from "./constants";
-import type { EnvLine, EnvVariable, ParseResult } from "./types";
+import type { EnvLine, EnvVariable, ParseResult, Quote } from "./types";
 
 /**
  * Strip env2op/op2env header blocks from content
@@ -39,34 +39,56 @@ export function stripHeaders(content: string): string {
     return result.join("\n");
 }
 
+export interface ParsedValue {
+    value: string;
+    /** Quote that wrapped the value, if any */
+    quote?: Quote;
+    /**
+     * Index in the raw text where an inline comment starts, including the whitespace before it,
+     * so `raw.slice(commentStart)` is the comment as written
+     */
+    commentStart?: number;
+}
+
 /**
- * Parse a value from an environment variable line
- * Handles quoted strings and inline comments
+ * Parse the text after `KEY=` into its value and any inline comment
+ *
+ * A quoted value ends at the first matching quote followed only by whitespace or a comment, as
+ * dotenv reads it: `"{"x":1}"` is `{"x":1}`, while `"a" # say "hi"` is `a`. Unquoted, `#` starts
+ * a comment only after whitespace, so `#336699` stays a value.
  */
-function parseValue(raw: string): string {
-    const trimmed = raw.trim();
+export function parseValue(raw: string): ParsedValue {
+    const start = raw.length - raw.trimStart().length;
+    const body = raw.slice(start);
 
-    // Handle double-quoted values
-    if (trimmed.startsWith('"')) {
-        const endQuote = trimmed.indexOf('"', 1);
-        if (endQuote !== -1) {
-            return trimmed.slice(1, endQuote);
+    for (const quote of ['"', "'"] as const) {
+        if (!body.startsWith(quote)) {
+            continue;
+        }
+        let firstEnd = -1;
+        for (let end = body.indexOf(quote, 1); end !== -1; end = body.indexOf(quote, end + 1)) {
+            if (firstEnd === -1) {
+                firstEnd = end;
+            }
+            const rest = body.slice(end + 1);
+            if (/^\s*(#.*)?$/.test(rest)) {
+                const value = body.slice(1, end);
+                return rest.trim() ? { value, quote, commentStart: start + end + 1 } : { value, quote };
+            }
+        }
+        // Text follows every closing quote: keep the value up to the first one
+        if (firstEnd !== -1) {
+            return { value: body.slice(1, firstEnd), quote };
         }
     }
 
-    // Handle single-quoted values
-    if (trimmed.startsWith("'")) {
-        const endQuote = trimmed.indexOf("'", 1);
-        if (endQuote !== -1) {
-            return trimmed.slice(1, endQuote);
-        }
+    // Split before trimming, so that `KEY=   # note` is an empty value with a comment,
+    // not the value "# note"
+    const comment = /\s+#/.exec(raw);
+    if (comment) {
+        return { value: raw.slice(0, comment.index).trim(), commentStart: comment.index };
     }
-
-    // Handle unquoted values with potential inline comments
-    // Only treat # as comment if preceded by whitespace. Split before trimming, so that
-    // `KEY=   # note` is an empty value with a comment, not the value "# note"
-    const parts = raw.split(/\s+#/);
-    return (parts[0] ?? raw).trim();
+    return { value: raw.trim() };
 }
 
 /**
@@ -95,6 +117,17 @@ export async function parseEnvFile(filePath: string): Promise<ParseResult> {
         throw errors.envFileNotFound(filePath);
     }
 
+    return parseEnvText(rawContent);
+}
+
+/**
+ * Parse the text of an .env file: strips a BOM and any env2op/op2env header, then reads
+ * each line. Quoted values follow dotenv's rules (see parseValue).
+ *
+ * @param rawContent - The file's contents
+ * @returns ParseResult containing variables and any errors
+ */
+export function parseEnvText(rawContent: string): ParseResult {
     const content = stripHeaders(stripBom(rawContent));
     const rawLines = content.split("\n");
     const variables: EnvVariable[] = [];
@@ -128,7 +161,8 @@ export async function parseEnvFile(filePath: string): Promise<ParseResult> {
         if (match?.[1]) {
             const key = match[1];
             const rawValue = match[2] ?? "";
-            const value = parseValue(rawValue);
+            const { value, quote, commentStart } = parseValue(rawValue);
+            const inlineComment = commentStart === undefined ? undefined : rawValue.slice(commentStart);
 
             variables.push({
                 key,
@@ -137,7 +171,13 @@ export async function parseEnvFile(filePath: string): Promise<ParseResult> {
                 line: lineNumber,
             });
 
-            lines.push({ type: "variable", key, value });
+            lines.push({
+                type: "variable",
+                key,
+                value,
+                ...(quote && { quote }),
+                ...(inlineComment && { inlineComment }),
+            });
             currentComment = "";
         } else if (trimmed.includes("=")) {
             // Line has = but doesn't match valid key format

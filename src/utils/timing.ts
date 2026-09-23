@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 
-const MIN_SPINNER_TIME = 500; // Minimum time to show spinner state (ms)
+const MIN_SPINNER_TIME = 200; // Minimum time to show spinner state (ms)
 
 /**
  * Run an async operation with minimum display time for the spinner

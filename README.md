@@ -121,6 +121,11 @@ reference: 1Password stores no empty field, and an empty value is not a secret. 
 back unchanged, so "empty" survives the round trip. That matters where the file overrides another,
 as `.env.development.local` does `.env`: there `KEY=` and a missing `KEY` mean different things.
 
+A quoted value keeps its quotes in the template (`KEY="op://…"`), so `op2env` writes it back quoted.
+A value such as `"a # b"` or `"  padded  "` then reads the same on the next push. Inline comments
+(`KEY=value # note`) are kept too; a reference followed by one is always quoted, so `op2env` writes
+that line back as `KEY="value" # note`.
+
 ### Examples for env2op
 
 ```bash
@@ -148,7 +153,7 @@ env2op .env.production Personal "MyApp" -f
 | `-f, --force`   | Skip confirmation prompts                             |
 | `--dry-run`     | Preview actions without executing                     |
 | `--secret`      | Store all fields as 'password' type (default: 'text') |
-| `--verbose`     | Show op CLI output                                    |
+| `--verbose`     | Show op CLI output (item values are never printed)    |
 | `--update`      | Check for and install updates                         |
 | `-v, --version` | Show version                                          |
 | `-h, --help`    | Show help                                             |
@@ -241,9 +246,23 @@ You can also use env2op as a library:
 ```typescript
 import { parseEnvFile, createSecureNote, generateTemplateContent } from "@tolgamorf/env2op-cli";
 
-const result = parseEnvFile(".env");
+const result = await parseEnvFile(".env");
 console.log(result.variables);
 ```
+
+The parser and the comment masking are exported on their own, and importing the package has no
+side effects (no CLI start, no update check, no prompts):
+
+| Export | What it does |
+| --- | --- |
+| `parseEnvText(content)` | Synchronous `parseEnvFile` for text you already hold: strips a BOM and any env2op header, then parses each line |
+| `parseValue(raw)` | Parses the text after `KEY=` into `{ value, quote?, commentStart? }` (`ParsedValue`) |
+| `maskSecretRefsInComments(template)` | Masks `op://` in full-line and inline comments so `op inject` does not read them as references; returns a `MaskedTemplate` |
+| `unmaskSecretRefs(output, mask)` | Restores the masked text in `op inject`'s output |
+
+The parser follows dotenv's quoting rules. A quoted value ends at the first matching quote followed
+only by whitespace or a comment, so `"{"x":1}"` is `{"x":1}`. Unquoted, `#` starts a comment only
+after whitespace, so `#336699` is a value.
 
 ## License
 

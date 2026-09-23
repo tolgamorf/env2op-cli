@@ -23,10 +23,9 @@ export const ErrorCodes = {
     OP_SIGNIN_FAILED: "OP_SIGNIN_FAILED",
     VAULT_NOT_FOUND: "VAULT_NOT_FOUND",
     VAULT_CREATE_FAILED: "VAULT_CREATE_FAILED",
-    ITEM_EXISTS: "ITEM_EXISTS",
     ITEM_CREATE_FAILED: "ITEM_CREATE_FAILED",
     ITEM_EDIT_FAILED: "ITEM_EDIT_FAILED",
-    PARSE_ERROR: "PARSE_ERROR",
+    OP_COMMAND_FAILED: "OP_COMMAND_FAILED",
     TEMPLATE_NOT_FOUND: "TEMPLATE_NOT_FOUND",
     INJECT_FAILED: "INJECT_FAILED",
 } as const;
@@ -82,21 +81,14 @@ export const errors = {
     vaultCreateFailed: (message: string): Env2OpError =>
         new Env2OpError(`Failed to create vault: ${message}`, ErrorCodes.VAULT_CREATE_FAILED),
 
-    itemExists: (title: string, vault: string): Env2OpError =>
-        new Env2OpError(
-            `Item "${title}" already exists in vault "${vault}"`,
-            ErrorCodes.ITEM_EXISTS,
-            "Use default behavior (overwrites) or choose a different item name",
-        ),
-
     itemCreateFailed: (message: string): Env2OpError =>
         new Env2OpError(`Failed to create 1Password item: ${message}`, ErrorCodes.ITEM_CREATE_FAILED),
 
     itemEditFailed: (message: string): Env2OpError =>
         new Env2OpError(`Failed to edit 1Password item: ${message}`, ErrorCodes.ITEM_EDIT_FAILED),
 
-    parseError: (line: number, message: string): Env2OpError =>
-        new Env2OpError(`Parse error at line ${line}: ${message}`, ErrorCodes.PARSE_ERROR),
+    opCommandFailed: (action: string, message: string): Env2OpError =>
+        new Env2OpError(`1Password CLI could not ${action}: ${message}`, ErrorCodes.OP_COMMAND_FAILED),
 
     templateNotFound: (path: string): Env2OpError =>
         new Env2OpError(

@@ -4,7 +4,7 @@
 
 import * as p from "@clack/prompts";
 import { errors } from "../utils/errors";
-import { checkOpCli, checkSignedIn, signIn } from "./onepassword";
+import { checkSignedIn, getOpStatus, signIn } from "./onepassword";
 
 export interface AuthOptions {
     verbose: boolean;
@@ -22,14 +22,13 @@ export async function ensureOpAuthenticated(options: AuthOptions): Promise<void>
     const authSpinner = p.spinner();
     authSpinner.start("Checking 1Password CLI...");
 
-    const opInstalled = await checkOpCli({ verbose });
-    if (!opInstalled) {
+    const status = await getOpStatus({ verbose });
+    if (status === "missing") {
         authSpinner.stop("1Password CLI not found");
         throw errors.opCliNotInstalled();
     }
 
-    let signedIn = await checkSignedIn({ verbose });
-    if (!signedIn) {
+    if (status === "signed-out") {
         authSpinner.message("Signing in to 1Password...");
 
         const signInSuccess = await signIn({ verbose });
@@ -39,8 +38,7 @@ export async function ensureOpAuthenticated(options: AuthOptions): Promise<void>
         }
 
         // Verify sign-in was successful
-        signedIn = await checkSignedIn({ verbose });
-        if (!signedIn) {
+        if (!(await checkSignedIn({ verbose }))) {
             authSpinner.stop();
             throw errors.opNotSignedIn();
         }

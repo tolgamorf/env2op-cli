@@ -121,12 +121,19 @@ export function generateTemplateContent(options: TemplateOptions, templateFileNa
                 // another (`KEY=` in .env.development.local is not the same as inheriting .env's
                 // KEY). `op inject` passes a line with no reference through unchanged, so
                 // op2env writes `KEY=` straight back. An empty value is not a secret.
+                const comment = line.inlineComment ?? "";
                 if (line.value === "") {
-                    outputLines.push(`${line.key}=`);
+                    outputLines.push(`${line.key}=${comment}`);
                     break;
                 }
+                // Quote the reference as the source quoted the value: `op inject` substitutes inside
+                // the quotes, so a value holding ` #` or edge spaces comes back quoted and parses
+                // the same on the next push. `op run` strips the quotes as a dotenv parser would.
+                // A reference followed by a comment is always quoted: unquoted, `op inject` eats the
+                // space before the `#`, and `val# c` would read back as the whole value.
                 const fieldId = fieldIds[line.key] ?? line.key;
-                outputLines.push(`${line.key}=op://${vaultId}/${itemId}/${fieldId}`);
+                const quote = line.quote ?? (comment ? '"' : "");
+                outputLines.push(`${line.key}=${quote}op://${vaultId}/${itemId}/${fieldId}${quote}${comment}`);
                 break;
             }
         }

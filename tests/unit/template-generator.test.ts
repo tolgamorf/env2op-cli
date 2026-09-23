@@ -11,10 +11,6 @@ describe("generateTemplateContent", () => {
     const createOptions = (overrides: Partial<TemplateOptions> = {}): TemplateOptions => ({
         vaultId: "vault123",
         itemId: "item456",
-        variables: [
-            { key: "KEY1", value: "value1", line: 1 },
-            { key: "KEY2", value: "value2", line: 2 },
-        ],
         lines: [
             { type: "variable", key: "KEY1", value: "value1" },
             { type: "variable", key: "KEY2", value: "value2" },
@@ -90,6 +86,44 @@ describe("generateTemplateContent", () => {
         expect(push("", {})).toContain("COURIER_API_KEY=\n");
         expect(push("sk_live", { COURIER_API_KEY: "f-new" })).toContain("COURIER_API_KEY=op://vault123/item456/f-new");
         expect(push("", {})).not.toContain("COURIER_API_KEY=op://");
+    });
+
+    test("quotes a reference the way the source quoted its value", () => {
+        // op inject substitutes inside the quotes, so a value holding ` #` or edge spaces comes
+        // back quoted and reads the same on the next push instead of losing its tail.
+        const content = generateTemplateContent(
+            createOptions({
+                lines: [
+                    { type: "variable", key: "KEY1", value: "a # b", quote: '"' },
+                    { type: "variable", key: "KEY2", value: "  sp  ", quote: "'" },
+                    { type: "variable", key: "KEY3", value: "", quote: '"' },
+                ],
+                fieldIds: { KEY1: "field1", KEY2: "field2" },
+            }),
+            ".env.tpl",
+        );
+
+        expect(content).toContain('KEY1="op://vault123/item456/field1"\n');
+        expect(content).toContain("KEY2='op://vault123/item456/field2'\n");
+        expect(content).toContain("KEY3=\n");
+    });
+
+    test("keeps inline comments, quoting a reference that one follows", () => {
+        // Unquoted, op inject eats the space before the #, and `val# c` reads back as the value
+        const content = generateTemplateContent(
+            createOptions({
+                lines: [
+                    { type: "variable", key: "KEY1", value: "v", inlineComment: " # plain" },
+                    { type: "variable", key: "KEY2", value: "v", quote: "'", inlineComment: "  # quoted" },
+                    { type: "variable", key: "KEY3", value: "", quote: '"', inlineComment: " # empty" },
+                ],
+            }),
+            ".env.tpl",
+        );
+
+        expect(content).toContain('KEY1="op://vault123/item456/field1" # plain\n');
+        expect(content).toContain("KEY2='op://vault123/item456/field2'  # quoted\n");
+        expect(content).toContain("KEY3= # empty\n");
     });
 
     test("includes version header", () => {

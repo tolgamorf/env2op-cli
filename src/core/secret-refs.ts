@@ -15,6 +15,8 @@
  * of this; only the inject path does.
  */
 
+import { parseValue } from "./env-parser";
+
 const PREFIX = "op://";
 
 /**
@@ -51,18 +53,39 @@ function pickMask(template: string): string {
 }
 
 /**
- * Mask `op://` on full-line comments so `op inject` leaves them alone.
+ * Mask `op://` in one line's comment, if it has one
  *
- * Only full-line comments are masked. An inline `#` is ambiguous in a .env file
- * — it can sit inside a quoted value — so masking after one risks neutering a
- * real reference.
+ * A full-line comment is masked whole. On a variable line only the inline comment
+ * is, found by the same rules the parser uses: a `#` inside a quoted value is part
+ * of the value, so the reference before the comment is never touched.
+ */
+function maskLine(line: string, mask: string): string {
+    if (line.trimStart().startsWith("#")) {
+        return line.replaceAll(PREFIX, mask);
+    }
+
+    const assignment = /^\s*[A-Za-z_][A-Za-z0-9_]*=/.exec(line);
+    if (!assignment) {
+        return line;
+    }
+    const valueStart = assignment[0].length;
+    const { commentStart } = parseValue(line.slice(valueStart));
+    if (commentStart === undefined) {
+        return line;
+    }
+    const cut = valueStart + commentStart;
+    return line.slice(0, cut) + line.slice(cut).replaceAll(PREFIX, mask);
+}
+
+/**
+ * Mask `op://` in comments so `op inject` leaves them alone.
  */
 export function maskSecretRefsInComments(template: string): MaskedTemplate {
     const mask = pickMask(template);
 
     const text = template
         .split("\n")
-        .map((line) => (line.trimStart().startsWith("#") ? line.replaceAll(PREFIX, mask) : line))
+        .map((line) => maskLine(line, mask))
         .join("\n");
 
     return { text, mask, changed: text !== template };

@@ -6,10 +6,14 @@ interface ExecResult {
     stdout: string;
     stderr: string;
     exitCode: number;
+    /** Set when the process could not be started, e.g. "ENOENT" when the command is not installed */
+    spawnError?: string;
 }
 
 interface ExecOptions {
     verbose?: boolean;
+    /** Keep stdout off the terminal in verbose mode, for output that carries secret values */
+    hideStdout?: boolean;
 }
 
 function quoteArg(arg: string): string {
@@ -22,7 +26,7 @@ function quoteArg(arg: string): string {
 /**
  * Collect stdout/stderr from a child process and resolve when complete
  */
-function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult> {
+function collectOutput(proc: ChildProcess, verbose: boolean, hideStdout = false): Promise<ExecResult> {
     return new Promise((resolve) => {
         const stdoutChunks: string[] = [];
         const stderrChunks: string[] = [];
@@ -30,7 +34,7 @@ function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult
         proc.stdout?.on("data", (data: Buffer | string) => {
             const text = Buffer.isBuffer(data) ? data.toString() : String(data);
             stdoutChunks.push(text);
-            if (verbose) {
+            if (verbose && !hideStdout) {
                 process.stdout.write(text);
             }
         });
@@ -44,6 +48,9 @@ function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult
         });
 
         proc.on("close", (code) => {
+            if (verbose && hideStdout && stdoutChunks.length > 0) {
+                console.log(pc.dim("(output hidden: it contains secret values)"));
+            }
             resolve({
                 stdout: stdoutChunks.join(""),
                 stderr: stderrChunks.join(""),
@@ -51,12 +58,13 @@ function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult
             });
         });
 
-        proc.on("error", (err) => {
+        proc.on("error", (err: NodeJS.ErrnoException) => {
             stderrChunks.push(err.message);
             resolve({
                 stdout: stdoutChunks.join(""),
                 stderr: stderrChunks.join(""),
                 exitCode: 1,
+                spawnError: err.code ?? "UNKNOWN",
             });
         });
     });
@@ -66,7 +74,7 @@ function collectOutput(proc: ChildProcess, verbose: boolean): Promise<ExecResult
  * Execute a shell command and return the result
  */
 export async function exec(command: string, args: string[] = [], options: ExecOptions = {}): Promise<ExecResult> {
-    const { verbose = false } = options;
+    const { verbose = false, hideStdout = false } = options;
     const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
 
     if (verbose) {
@@ -77,32 +85,7 @@ export async function exec(command: string, args: string[] = [], options: ExecOp
         stdio: ["ignore", "pipe", "pipe"],
     });
 
-    return collectOutput(proc, verbose);
-}
-
-/**
- * Execute a command and throw if it fails
- */
-export async function execOrThrow(
-    command: string,
-    args: string[] = [],
-    options: ExecOptions = {},
-): Promise<ExecResult> {
-    const result = await exec(command, args, options);
-    if (result.exitCode !== 0) {
-        const error = new Error(result.stderr || `Command failed with exit code ${result.exitCode}`);
-        (error as ExecError).stderr = result.stderr;
-        (error as ExecError).stdout = result.stdout;
-        (error as ExecError).exitCode = result.exitCode;
-        throw error;
-    }
-    return result;
-}
-
-interface ExecError extends Error {
-    stderr: string;
-    stdout: string;
-    exitCode: number;
+    return collectOutput(proc, verbose, hideStdout);
 }
 
 interface ExecWithStdinOptions extends ExecOptions {
@@ -117,7 +100,7 @@ export async function execWithStdin(
     args: string[] = [],
     options: ExecWithStdinOptions,
 ): Promise<ExecResult> {
-    const { stdin: stdinContent, verbose = false } = options;
+    const { stdin: stdinContent, verbose = false, hideStdout = false } = options;
 
     if (verbose) {
         const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
@@ -131,5 +114,5 @@ export async function execWithStdin(
     proc.stdin?.write(stdinContent);
     proc.stdin?.end();
 
-    return collectOutput(proc, verbose);
+    return collectOutput(proc, verbose, hideStdout);
 }

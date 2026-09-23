@@ -20,6 +20,55 @@ jobs:
           $version = (Get-Content package.json | ConvertFrom-Json).version
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Get SHA256 from release
+        id: sha256
+        shell: pwsh
+        run: |
+          # Read the asset through its download URL, retrying: right after upload, the release
+          # listing that `gh release download` reads can still show no assets for minutes
+          $url = "https://github.com/tolgamorf/env2op-cli/releases/download/v${{ steps.version.outputs.version }}/SHASUMS256.txt"
+          $sha256 = $null
+          for ($attempt = 1; $attempt -le 30; $attempt++) {
+            try {
+              # Saved to a file: GitHub serves it as application/octet-stream, so .Content is bytes
+              Invoke-WebRequest -Uri $url -UseBasicParsing -OutFile SHASUMS256.txt
+              $shasums = Get-Content SHASUMS256.txt -Raw
+              if ($shasums -match '(?m)^([a-fA-F0-9]{64})\s+env2op-windows-x64\.zip') {
+                $sha256 = $Matches[1].ToUpper()
+                break
+              }
+            } catch {}
+            Write-Host "SHASUMS256.txt not available yet, retrying in 10s ($attempt/30)"
+            Start-Sleep -Seconds 10
+          }
+          if (-not $sha256) { throw "Could not read the env2op-windows-x64.zip checksum from $url" }
+          Write-Host "sha256=$sha256"
+          echo "sha256=$sha256" >> $env:GITHUB_OUTPUT
+
+      - name: Stamp version and checksum into the package
+        shell: pwsh
+        run: |
+          # The committed manifests are only updated after the release, so they still name the
+          # previous version here. Write this release's version, URL and checksum before packing.
+          $version = "${{ steps.version.outputs.version }}"
+          $sha256 = "${{ steps.sha256.outputs.sha256 }}"
+          $install = "manifests/chocolatey/tools/chocolateyinstall.ps1"
+          $nuspec = "manifests/chocolatey/env2op-cli.nuspec"
+          (Get-Content $install -Raw) `
+            -replace "download/v[^/]+/env2op-windows-x64\.zip", "download/v${version}/env2op-windows-x64.zip" `
+            -replace "checksum64(\s*)= '[A-Fa-f0-9]+'", "checksum64`$1= '${sha256}'" |
+            Set-Content $install -NoNewline -Encoding utf8BOM
+          (Get-Content $nuspec -Raw) `
+            -replace "<version>[^<]+</version>", "<version>${version}</version>" `
+            -replace "releases/tag/v[^<]+</releaseNotes>", "releases/tag/v${version}</releaseNotes>" |
+            Set-Content $nuspec -NoNewline
+          Select-String -Path $install -Pattern "url64bit|checksum64 "
+          Select-String -Path $nuspec -Pattern "<version>|releaseNotes"
+          if (-not (Select-String -Path $install -SimpleMatch "download/v${version}/") -or
+              -not (Select-String -Path $install -SimpleMatch $sha256)) {
+            throw "Failed to stamp version ${version} into $install"
+          }
+
       - name: Setup Chocolatey
         uses: crazy-max/ghaction-chocolatey@v3
         with:

@@ -23,11 +23,26 @@ jobs:
       - name: Get SHA256 from release
         id: sha256
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          $shasums = gh release download "v${{ steps.version.outputs.version }}" --pattern "SHASUMS256.txt" --output -
-          $sha256 = ($shasums -split '\s+')[0].ToUpper()
+          # Read the asset through its download URL, retrying: right after upload, the release
+          # listing that `gh release download` reads can still show no assets for minutes
+          $url = "https://github.com/tolgamorf/env2op-cli/releases/download/v${{ steps.version.outputs.version }}/SHASUMS256.txt"
+          $sha256 = $null
+          for ($attempt = 1; $attempt -le 30; $attempt++) {
+            try {
+              # Saved to a file: GitHub serves it as application/octet-stream, so .Content is bytes
+              Invoke-WebRequest -Uri $url -UseBasicParsing -OutFile SHASUMS256.txt
+              $shasums = Get-Content SHASUMS256.txt -Raw
+              if ($shasums -match '(?m)^([a-fA-F0-9]{64})\s+env2op-windows-x64\.zip') {
+                $sha256 = $Matches[1].ToUpper()
+                break
+              }
+            } catch {}
+            Write-Host "SHASUMS256.txt not available yet, retrying in 10s ($attempt/30)"
+            Start-Sleep -Seconds 10
+          }
+          if (-not $sha256) { throw "Could not read the env2op-windows-x64.zip checksum from $url" }
+          Write-Host "sha256=$sha256"
           echo "sha256=$sha256" >> $env:GITHUB_OUTPUT
 
       - name: Create multi-file manifest

@@ -164,7 +164,7 @@ end
 `;
 }
 
-async function fetchSha256(version: string, maxRetries = 12): Promise<string> {
+async function fetchSha256(version: string, maxRetries = 60): Promise<string> {
     const url = `https://registry.npmjs.org/@tolgamorf/env2op-cli/-/env2op-cli-${version}.tgz`;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -178,7 +178,9 @@ async function fetchSha256(version: string, maxRetries = 12): Promise<string> {
         }
 
         if (response.status === 404 && attempt < maxRetries) {
-            const waitTime = 15000; // 15s between retries (total ~3 min max wait)
+            // 15s between retries (total ~15 min max wait): npm now "processes" a new version
+            // after publish, and its tarball can 404 for several minutes after its metadata is live
+            const waitTime = 15000;
             console.log(`  Package not yet available, retrying in ${waitTime / 1000}s... (${attempt}/${maxRetries})`);
             await Bun.sleep(waitTime);
             continue;

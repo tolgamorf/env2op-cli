@@ -2,18 +2,6 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 
 /**
- * Unicode symbols for different message types
- */
-const symbols = {
-    success: pc.green("\u2713"),
-    error: pc.red("\u2717"),
-    warning: pc.yellow("\u26A0"),
-    info: pc.blue("\u2139"),
-    arrow: pc.cyan("\u2192"),
-    bullet: pc.dim("\u2022"),
-};
-
-/**
  * Logger utility for formatted CLI output using @clack/prompts
  */
 export const logger = {
@@ -25,13 +13,6 @@ export const logger = {
             ? pc.bgYellow(pc.black(` ${name} v${version} [DRY RUN] `))
             : pc.bgCyan(pc.black(` ${name} v${version} `));
         p.intro(label);
-    },
-
-    /**
-     * Display section header
-     */
-    section(title: string) {
-        console.log(`\n${pc.bold(pc.underline(title))}`);
     },
 
     /**
@@ -81,27 +62,6 @@ export const logger = {
      */
     keyValue(key: string, value: string, indent = 2) {
         console.log(`${" ".repeat(indent)}${pc.dim(key)}: ${pc.cyan(value)}`);
-    },
-
-    /**
-     * Display list item
-     */
-    listItem(item: string, indent = 2) {
-        console.log(`${" ".repeat(indent)}${symbols.bullet} ${item}`);
-    },
-
-    /**
-     * Display arrow item
-     */
-    arrowItem(item: string, indent = 2) {
-        console.log(`${" ".repeat(indent)}${symbols.arrow} ${item}`);
-    },
-
-    /**
-     * Display dry run indicator
-     */
-    dryRun(message: string) {
-        console.log(`${pc.yellow("[DRY RUN]")} ${message}`);
     },
 
     /**

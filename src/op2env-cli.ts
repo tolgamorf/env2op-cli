@@ -5,7 +5,25 @@ import { getCliVersion, maybeShowUpdateNotification } from "./lib/update";
 import { showUpdateNotification } from "./lib/update-prompts";
 import { parseArgs } from "./utils/args";
 
-const { flags, positional, options } = parseArgs(process.argv.slice(2));
+const { flags, positional, options, errors } = parseArgs(process.argv.slice(2), [
+    "h",
+    "help",
+    "v",
+    "version",
+    "update",
+    "f",
+    "force",
+    "verbose",
+    "dry-run",
+]);
+
+if (errors.length > 0) {
+    for (const error of errors) {
+        console.error(`${pc.red(pc.bold("Error:"))} ${error}`);
+    }
+    console.error(`Run ${pc.cyan("op2env --help")} to see the available options.`);
+    process.exit(1);
+}
 
 // Check for flags
 const hasHelp = flags.has("h") || flags.has("help");

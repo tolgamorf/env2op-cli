@@ -7,7 +7,26 @@ import { showUpdateNotification } from "./lib/update-prompts";
 import { parseArgs } from "./utils/args";
 
 const pkg = await import("../package.json");
-const { flags, positional, options } = parseArgs(process.argv.slice(2));
+const { flags, positional, options, errors } = parseArgs(process.argv.slice(2), [
+    "h",
+    "help",
+    "v",
+    "version",
+    "update",
+    "f",
+    "force",
+    "verbose",
+    "dry-run",
+    "secret",
+]);
+
+if (errors.length > 0) {
+    for (const error of errors) {
+        console.error(`${pc.red(pc.bold("Error:"))} ${error}`);
+    }
+    console.error(`Run ${pc.cyan("env2op --help")} to see the available options.`);
+    process.exit(1);
+}
 
 // Check for flags
 const hasHelp = flags.has("h") || flags.has("help");

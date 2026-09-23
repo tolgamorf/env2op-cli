@@ -56,6 +56,18 @@ describe("maskSecretRefsInComments", () => {
         expect(maskSecretRefsInComments(line).text).toBe(line);
     });
 
+    test("masks op:// in an inline comment but not the reference before it", () => {
+        const line = `NOTE="${REF}" # see op://docs`;
+        const { text, mask } = maskSecretRefsInComments(line);
+        expect(text).toBe(`NOTE="${REF}" # see ${mask}docs`);
+    });
+
+    test("does not mask op:// inside a quoted value that holds ' #'", () => {
+        // The # sits inside the quotes, so it is part of the value, not a comment
+        const line = `LITERAL="a # op://not-a-comment"`;
+        expect(maskSecretRefsInComments(line).text).toBe(line);
+    });
+
     test("preserves content with no references at all", () => {
         const template = "# plain comment\nFOO=bar\n\nBAZ=qux\n";
         expect(maskSecretRefsInComments(template).text).toBe(template);

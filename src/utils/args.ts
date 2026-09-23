@@ -6,6 +6,8 @@ export interface ParsedArgs {
     flags: Set<string>;
     positional: string[];
     options: Record<string, string>;
+    /** Problems with the arguments (unknown flags, missing option values) */
+    errors: string[];
 }
 
 /**
@@ -18,6 +20,11 @@ const VALUE_OPTIONS: Record<string, string> = {
 };
 
 /**
+ * Value options that may also be used bare, as a flag (bare `--secret` means `--secret=password`)
+ */
+const FLAG_WHEN_BARE = new Set(["--secret"]);
+
+/**
  * Parse CLI arguments into flags, positional args, and options
  *
  * Handles:
@@ -27,11 +34,24 @@ const VALUE_OPTIONS: Record<string, string> = {
  * - Options with values: -o value, --output value, --output=value
  * - Value options used without a value: recorded as a flag instead (e.g. bare --secret)
  * - Positional arguments: anything not starting with -
+ *
+ * A flag not in `knownFlags` is reported in `errors` rather than ignored, so a typo
+ * like `--dryrun` stops the command instead of running it for real.
  */
-export function parseArgs(args: string[]): ParsedArgs {
+export function parseArgs(args: string[], knownFlags: readonly string[]): ParsedArgs {
+    const known = new Set(knownFlags);
     const flags = new Set<string>();
     const positional: string[] = [];
     const options: Record<string, string> = {};
+    const errors: string[] = [];
+
+    const addFlag = (name: string, display: string) => {
+        if (known.has(name)) {
+            flags.add(name);
+        } else {
+            errors.push(`Unknown option: ${display}`);
+        }
+    };
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i] as string;
@@ -44,26 +64,28 @@ export function parseArgs(args: string[]): ParsedArgs {
         const optionKey = VALUE_OPTIONS[name];
         if (optionKey) {
             const next = args[i + 1];
-            if (inlineValue !== undefined) {
+            if (inlineValue) {
                 options[optionKey] = inlineValue;
-            } else if (next && !next.startsWith("-")) {
+            } else if (inlineValue === undefined && next && !next.startsWith("-")) {
                 options[optionKey] = next;
                 i++; // skip next arg
-            } else {
+            } else if (inlineValue === undefined && FLAG_WHEN_BARE.has(name)) {
                 // Used without a value — keep it addressable as a flag
-                flags.add(name.replace(/^--?/, ""));
+                addFlag(name.replace(/^--?/, ""), name);
+            } else {
+                errors.push(`${name} requires ${optionKey === "output" ? "a path" : "a value"}`);
             }
         } else if (arg.startsWith("--")) {
-            flags.add(arg.slice(2));
-        } else if (arg.startsWith("-")) {
+            addFlag(arg.slice(2), arg);
+        } else if (arg.startsWith("-") && arg.length > 1) {
             // Handle short flags
             for (const char of arg.slice(1)) {
-                flags.add(char);
+                addFlag(char, `-${char}`);
             }
         } else {
             positional.push(arg);
         }
     }
 
-    return { flags, positional, options };
+    return { flags, positional, options, errors };
 }

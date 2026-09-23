@@ -4,8 +4,8 @@ $toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
 $packageArgs = @{
     packageName    = $env:ChocolateyPackageName
     unzipLocation  = $toolsDir
-    url64bit       = 'https://github.com/tolgamorf/env2op-cli/releases/download/v0.2.11/env2op-windows-x64.zip'
-    checksum64     = 'C5D4FF5A72F01F98E8CA1714547DD94C955322DD495252869583F75C0A9ADFAA'
+    url64bit       = 'https://github.com/tolgamorf/env2op-cli/releases/download/v0.3.1/env2op-windows-x64.zip'
+    checksum64     = '31798637845A1CECC077DDC2AB1C5AC80F4DB55AF4F0670F9E554BB9D38E04AB'
     checksumType64 = 'sha256'
 }
 

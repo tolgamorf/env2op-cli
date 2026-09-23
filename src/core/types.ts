@@ -18,7 +18,17 @@ export interface EnvVariable {
 export type EnvLine =
     | { type: "comment"; content: string }
     | { type: "empty" }
-    | { type: "variable"; key: string; value: string };
+    | {
+          type: "variable";
+          key: string;
+          value: string;
+          quote?: Quote;
+          /** Comment after the value, as written, including the whitespace before its `#` */
+          inlineComment?: string;
+      };
+
+/** Quote character a value was wrapped in, kept so the template can quote its reference the same way */
+export type Quote = '"' | "'";
 
 /**
  * Result of parsing an .env file
@@ -143,8 +153,6 @@ export interface TemplateOptions {
     vaultId: string;
     /** Item ID in 1Password */
     itemId: string;
-    /** Variables to include */
-    variables: EnvVariable[];
     /** All lines preserving structure */
     lines: EnvLine[];
     /** Field IDs mapped by field label */

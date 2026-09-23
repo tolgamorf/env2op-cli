@@ -24,10 +24,6 @@ describe("CLI output snapshots", () => {
             const options: TemplateOptions = {
                 vaultId: "vault-abc123",
                 itemId: "item-def456",
-                variables: [
-                    { key: "DATABASE_URL", value: "postgres://localhost/db", line: 1 },
-                    { key: "API_KEY", value: "sk-secret", line: 2 },
-                ],
                 lines: [
                     { type: "comment", content: "# Database config" },
                     { type: "variable", key: "DATABASE_URL", value: "postgres://localhost/db" },
@@ -49,7 +45,6 @@ describe("CLI output snapshots", () => {
             const options: TemplateOptions = {
                 vaultId: "v1",
                 itemId: "i1",
-                variables: [{ key: "KEY", value: "value", line: 1 }],
                 lines: [{ type: "variable", key: "KEY", value: "value" }],
                 fieldIds: { KEY: "f1" },
             };

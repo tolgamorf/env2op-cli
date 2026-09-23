@@ -4,8 +4,8 @@
  * This module exports the core functionality for programmatic use.
  */
 
-// Env parsing
-export { parseEnvFile, validateParseResult } from "./core/env-parser";
+// Env parsing (quoted values follow dotenv's rules)
+export { type ParsedValue, parseEnvFile, parseEnvText, parseValue, validateParseResult } from "./core/env-parser";
 // 1Password integration
 export {
     checkOpCli,
@@ -17,6 +17,8 @@ export {
     signIn,
     vaultExists,
 } from "./core/onepassword";
+// `op://` masking in comments, for handing a template to `op inject`
+export { type MaskedTemplate, maskSecretRefsInComments, unmaskSecretRefs } from "./core/secret-refs";
 // Template generation
 export {
     generateTemplateContent,
@@ -31,6 +33,7 @@ export type {
     EnvLine,
     EnvVariable,
     ParseResult,
+    Quote,
     TemplateOptions,
 } from "./core/types";
 

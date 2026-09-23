@@ -17,6 +17,21 @@ export async function checkOpCli(options: VerboseOption = {}): Promise<boolean> 
     return result.exitCode === 0;
 }
 
+export type OpStatus = "missing" | "signed-out" | "ready";
+
+/**
+ * Find out in one `op` call whether the CLI is installed and signed in: a missing binary fails
+ * to spawn, while an installed one that is signed out exits non-zero. Spawning op is slow under
+ * WSL (op.exe), so this replaces a separate `op --version` probe.
+ */
+export async function getOpStatus(options: VerboseOption = {}): Promise<OpStatus> {
+    const result = await exec("op", ["whoami", "--format", "json"], options);
+    if (result.spawnError === "ENOENT") {
+        return "missing";
+    }
+    return result.exitCode === 0 ? "ready" : "signed-out";
+}
+
 /**
  * Check if user is signed in to 1Password CLI
  */
@@ -34,47 +49,52 @@ export async function signIn(options: VerboseOption = {}): Promise<boolean> {
 }
 
 /**
- * Check if an item exists in a vault, return its ID if found
+ * Run an `op ... --format json` listing and parse it. A failed or unreadable listing throws
+ * rather than reading as empty: "not found" would lead the caller to create a duplicate.
  */
-export async function itemExists(vault: string, title: string, options: VerboseOption = {}): Promise<string | null> {
-    const result = await exec("op", ["item", "list", "--vault", vault, "--format", "json"], options);
+async function listJson<T>(args: string[], action: string, options: VerboseOption): Promise<T[]> {
+    const result = await exec("op", [...args, "--format", "json"], options);
     if (result.exitCode !== 0) {
-        return null;
+        throw errors.opCommandFailed(action, result.stderr.trim() || `op exited with code ${result.exitCode}`);
     }
     try {
-        const items = JSON.parse(result.stdout) as Array<{ id: string; title: string }>;
-        const item = items.find((item) => item.title === title);
-        return item?.id ?? null;
+        return JSON.parse(result.stdout) as T[];
     } catch {
-        return null;
+        throw errors.opCommandFailed(action, "op returned output that is not valid JSON");
     }
 }
 
 /**
+ * Check if an item exists in a vault, return its ID if found
+ *
+ * @throws Env2OpError if the items cannot be listed
+ */
+export async function itemExists(vault: string, title: string, options: VerboseOption = {}): Promise<string | null> {
+    const items = await listJson<{ id: string; title: string }>(
+        ["item", "list", "--vault", vault],
+        `list items in vault "${vault}"`,
+        options,
+    );
+    return items.find((item) => item.title === title)?.id ?? null;
+}
+
+/**
  * Check if a vault exists
+ *
+ * @throws Env2OpError if the vaults cannot be listed
  */
 export async function vaultExists(vault: string, options: VerboseOption = {}): Promise<boolean> {
-    const result = await exec("op", ["vault", "list", "--format", "json"], options);
-    if (result.exitCode !== 0) {
-        return false;
-    }
-    try {
-        const vaults = JSON.parse(result.stdout) as Array<{ name: string }>;
-        return vaults.some((v) => v.name === vault);
-    } catch {
-        return false;
-    }
+    const vaults = await listJson<{ name: string }>(["vault", "list"], "list vaults", options);
+    return vaults.some((v) => v.name === vault);
 }
 
 /**
  * Create a new vault
  */
 export async function createVault(name: string, options: VerboseOption = {}): Promise<void> {
-    try {
-        await exec("op", ["vault", "create", name], options);
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw errors.vaultCreateFailed(message);
+    const result = await exec("op", ["vault", "create", name], options);
+    if (result.exitCode !== 0) {
+        throw errors.vaultCreateFailed(result.stderr.trim() || `op exited with code ${result.exitCode}`);
     }
 }
 
@@ -89,7 +109,8 @@ let tempCounter = 0;
 
 function writeTempTemplate(template: OpFieldsTemplate): string {
     const filePath = join(tmpdir(), `env2op-template-${process.pid}-${++tempCounter}.json`);
-    writeFileSync(filePath, JSON.stringify(template), "utf-8");
+    // It holds every value in plain text, so keep it readable by the owner only
+    writeFileSync(filePath, JSON.stringify(template), { encoding: "utf-8", mode: 0o600 });
     return filePath;
 }
 
@@ -229,7 +250,8 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
                 "--format",
                 "json",
             ],
-            { verbose },
+            // op echoes the item back with every field value
+            { verbose, hideStdout: true },
         );
 
         // WSL → Windows op.exe always treats the spawned stdin as piped input
@@ -239,6 +261,7 @@ export async function createSecureNote(options: CreateItemOptions & VerboseOptio
             result = await execWithStdin("op", ["item", "create", "--format", "json"], {
                 stdin: JSON.stringify(buildFullTemplate(title, vault, fields, secret)),
                 verbose,
+                hideStdout: true,
             });
         }
 
@@ -281,7 +304,8 @@ export async function editSecureNote(options: EditItemOptions & VerboseOption): 
                 "--format",
                 "json",
             ],
-            { verbose },
+            // op echoes the item back with every field value
+            { verbose, hideStdout: true },
         );
 
         // WSL → Windows op.exe always treats the spawned stdin as piped input
@@ -291,6 +315,7 @@ export async function editSecureNote(options: EditItemOptions & VerboseOption): 
             result = await execWithStdin("op", ["item", "edit", itemId, "--format", "json"], {
                 stdin: JSON.stringify(buildFullTemplate(title, vault, fields, secret)),
                 verbose,
+                hideStdout: true,
             });
         }
 

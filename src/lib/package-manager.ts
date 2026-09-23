@@ -121,23 +121,3 @@ export async function detectPackageManager(): Promise<PackageManagerInfo> {
         displayName: DISPLAY_NAMES[fromCommands],
     };
 }
-
-/**
- * Get package manager info without async detection
- * Uses only path-based detection, falls back to npm
- */
-export function detectPackageManagerSync(): PackageManagerInfo {
-    const fromPath = detectFromPath() ?? "npm";
-    return {
-        type: fromPath,
-        updateCommand: UPDATE_COMMANDS[fromPath],
-        displayName: DISPLAY_NAMES[fromPath],
-    };
-}
-
-/**
- * Get the update command for a specific package manager
- */
-export function getUpdateCommand(pm: PackageManager): string {
-    return UPDATE_COMMANDS[pm];
-}

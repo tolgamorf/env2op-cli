@@ -45,7 +45,7 @@ export function generateTemplateHeader(templateFileName: string): string[] {
         `#  ${templateFileName} — 1Password Secret References`,
         "#",
         "#  This template contains references to secrets stored in 1Password.",
-        "#  The actual values are not stored here — only secret references.",
+        "#  Secret values are not stored here — only references to them.",
         "#",
         `#  To generate ${envFileName} with real values:`,
         `#    op2env ${templateFileName}`,
@@ -115,8 +115,25 @@ export function generateTemplateContent(options: TemplateOptions, templateFileNa
                 outputLines.push(line.content);
                 break;
             case "variable": {
+                // An empty value is written as a literal empty assignment, never a reference:
+                // 1Password stores no empty field, so `op://.../KEY` could never resolve, and
+                // dropping the line instead would change its meaning wherever this file overrides
+                // another (`KEY=` in .env.development.local is not the same as inheriting .env's
+                // KEY). `op inject` passes a line with no reference through unchanged, so
+                // op2env writes `KEY=` straight back. An empty value is not a secret.
+                const comment = line.inlineComment ?? "";
+                if (line.value === "") {
+                    outputLines.push(`${line.key}=${comment}`);
+                    break;
+                }
+                // Quote the reference as the source quoted the value: `op inject` substitutes inside
+                // the quotes, so a value holding ` #` or edge spaces comes back quoted and parses
+                // the same on the next push. `op run` strips the quotes as a dotenv parser would.
+                // A reference followed by a comment is always quoted: unquoted, `op inject` eats the
+                // space before the `#`, and `val# c` would read back as the whole value.
                 const fieldId = fieldIds[line.key] ?? line.key;
-                outputLines.push(`${line.key}=op://${vaultId}/${itemId}/${fieldId}`);
+                const quote = line.quote ?? (comment ? '"' : "");
+                outputLines.push(`${line.key}=${quote}op://${vaultId}/${itemId}/${fieldId}${quote}${comment}`);
                 break;
             }
         }

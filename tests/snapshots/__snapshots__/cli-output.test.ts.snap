@@ -5,7 +5,7 @@ exports[`CLI output snapshots template content generated template matches snapsh
 #  .env.tpl — 1Password Secret References
 #
 #  This template contains references to secrets stored in 1Password.
-#  The actual values are not stored here — only secret references.
+#  Secret values are not stored here — only references to them.
 #
 #  To generate .env with real values:
 #    op2env .env.tpl
@@ -31,7 +31,7 @@ exports[`CLI output snapshots template content template with no comments matches
 #  secrets.tpl — 1Password Secret References
 #
 #  This template contains references to secrets stored in 1Password.
-#  The actual values are not stored here — only secret references.
+#  Secret values are not stored here — only references to them.
 #
 #  To generate secrets with real values:
 #    op2env secrets.tpl

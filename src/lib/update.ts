@@ -3,7 +3,7 @@
  * Uses npm registry to check for new versions
  */
 
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import pkg from "../../package.json";
@@ -14,6 +14,8 @@ import { detectPackageManager, type PackageManagerInfo } from "./package-manager
 const CACHE_DIR = join(homedir(), ".env2op");
 const CACHE_FILE = join(CACHE_DIR, "update-check.json");
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// The check runs after every command, so a slow or dead network must not hold the CLI open
+const FETCH_TIMEOUT_MS = 1500;
 
 interface UpdateCache {
     lastCheck: number;
@@ -84,7 +86,9 @@ function shouldCheckForUpdate(cache: UpdateCache): boolean {
  */
 async function fetchLatestVersion(): Promise<string | null> {
     try {
-        const response = await fetch("https://registry.npmjs.org/@tolgamorf/env2op-cli/latest");
+        const response = await fetch("https://registry.npmjs.org/@tolgamorf/env2op-cli/latest", {
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
         if (!response.ok) return null;
         const data = (await response.json()) as { version?: string };
         return data.version ?? null;
@@ -194,19 +198,6 @@ export function skipVersion(version: string): void {
     const cache = loadCache();
     cache.skipVersion = version;
     saveCache(cache);
-}
-
-/**
- * Clear the update cache (for testing/debugging)
- */
-export function clearUpdateCache(): void {
-    try {
-        if (existsSync(CACHE_FILE)) {
-            unlinkSync(CACHE_FILE);
-        }
-    } catch {
-        // Ignore errors
-    }
 }
 
 /**

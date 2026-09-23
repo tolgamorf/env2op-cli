@@ -11,8 +11,17 @@ import { exec } from "../utils/shell";
 import { detectPackageManager, type PackageManagerInfo } from "./package-manager";
 
 // Cache configuration
-const CACHE_DIR = join(homedir(), ".env2op");
-const CACHE_FILE = join(CACHE_DIR, "update-check.json");
+let cacheDirOverride: string | undefined;
+const cacheDir = () => cacheDirOverride ?? join(homedir(), ".env2op");
+const cacheFile = () => join(cacheDir(), "update-check.json");
+
+/**
+ * Point the update cache at another directory, or back at ~/.env2op with undefined.
+ * For tests, so they never read or write the real cache.
+ */
+export function setUpdateCacheDirForTesting(dir: string | undefined): void {
+    cacheDirOverride = dir;
+}
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 // The check runs after every command, so a slow or dead network must not hold the CLI open
 const FETCH_TIMEOUT_MS = 1500;
@@ -49,8 +58,8 @@ export function getCliVersion(): string {
  */
 function loadCache(): UpdateCache {
     try {
-        if (existsSync(CACHE_FILE)) {
-            const content = readFileSync(CACHE_FILE, "utf-8");
+        if (existsSync(cacheFile())) {
+            const content = readFileSync(cacheFile(), "utf-8");
             return JSON.parse(content) as UpdateCache;
         }
     } catch {
@@ -64,10 +73,10 @@ function loadCache(): UpdateCache {
  */
 function saveCache(cache: UpdateCache): void {
     try {
-        if (!existsSync(CACHE_DIR)) {
-            mkdirSync(CACHE_DIR, { recursive: true });
+        if (!existsSync(cacheDir())) {
+            mkdirSync(cacheDir(), { recursive: true });
         }
-        writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
+        writeFileSync(cacheFile(), JSON.stringify(cache, null, 2));
     } catch {
         // Silently ignore cache write errors
     }
@@ -200,14 +209,32 @@ export function skipVersion(version: string): void {
     saveCache(cache);
 }
 
+/** Environment variable that turns off the automatic update check and its notice */
+export const NO_UPDATE_CHECK_ENV = "ENV2OP_NO_UPDATE_CHECK";
+
+/**
+ * Whether the automatic update check is turned off: ENV2OP_NO_UPDATE_CHECK set to any
+ * non-empty value other than "0" or "false". Useful where env2op is bundled at a pinned
+ * version, since upgrading the global install would not change the copy being run.
+ */
+export function isUpdateCheckDisabled(env: Record<string, string | undefined> = process.env): boolean {
+    const value = env[NO_UPDATE_CHECK_ENV]?.trim().toLowerCase();
+    return !!value && value !== "0" && value !== "false";
+}
+
 /**
  * Check for updates and show notification if available (non-blocking)
- * Silently ignores any errors
+ * Silently ignores any errors. Does nothing, not even a network request or a cache
+ * write, when the check is turned off (see isUpdateCheckDisabled); an explicit
+ * `--update` does not go through here and still works.
  */
 export async function maybeShowUpdateNotification(
     cliName: string,
     showNotification: (result: UpdateCheckResult, cliName: string) => void,
 ): Promise<void> {
+    if (isUpdateCheckDisabled()) {
+        return;
+    }
     try {
         const result = await checkForUpdate();
         if (result.updateAvailable && !result.isSkipped) {

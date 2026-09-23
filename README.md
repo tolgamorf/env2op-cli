@@ -197,6 +197,10 @@ op2env .env.tpl -f
 | `-v, --version` | Show version                                        |
 | `-h, --help`    | Show help                                           |
 
+Both commands check for a new version at most once a day and mention it when one is out. Set
+`ENV2OP_NO_UPDATE_CHECK=1` to turn that off (no request, no notice), for example where env2op is
+bundled at a pinned version. `--update` still works.
+
 ## How It Works
 
 1. **env2op** parses your `.env` file, creates a 1Password Secure Note, and generates a `.tpl` template

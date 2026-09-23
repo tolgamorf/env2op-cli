@@ -63,9 +63,10 @@ function parseValue(raw: string): string {
     }
 
     // Handle unquoted values with potential inline comments
-    // Only treat # as comment if preceded by whitespace
-    const parts = trimmed.split(/\s+#/);
-    return (parts[0] ?? trimmed).trim();
+    // Only treat # as comment if preceded by whitespace. Split before trimming, so that
+    // `KEY=   # note` is an empty value with a comment, not the value "# note"
+    const parts = raw.split(/\s+#/);
+    return (parts[0] ?? raw).trim();
 }
 
 /**

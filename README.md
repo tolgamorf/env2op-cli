@@ -116,6 +116,11 @@ Push environment variables to 1Password and generate a template file.
 env2op <env_file> <vault> <item_name> [options]
 ```
 
+A variable with an empty value (`KEY=`) is written into the template as `KEY=`, not as a
+reference: 1Password stores no empty field, and an empty value is not a secret. `op2env` writes it
+back unchanged, so "empty" survives the round trip. That matters where the file overrides another,
+as `.env.development.local` does `.env`: there `KEY=` and a missing `KEY` mean different things.
+
 ### Examples for env2op
 
 ```bash

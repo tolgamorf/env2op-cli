@@ -32,6 +32,9 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
         validateParseResult(parseResult, envFile);
 
         const { variables, lines } = parseResult;
+        // Empty values stay in the template as `KEY=` (see generateTemplateContent) and are
+        // not secrets, so only non-empty ones become fields in 1Password
+        const secretVariables = variables.filter((v) => v.value !== "");
 
         const varCount = variables.length;
         logger.success(`Parsed ${basename(envFile)} — found ${varCount} variable${varCount === 1 ? "" : "s"}`);
@@ -59,7 +62,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
             logger.keyValue("Vault", vault);
             logger.keyValue("Title", itemName);
             logger.keyValue("Type", secret ? "password (hidden)" : "text (visible)");
-            logger.keyValue("Fields", logger.formatFields(variables.map((v) => v.key)));
+            logger.keyValue("Fields", logger.formatFields(secretVariables.map((v) => v.key)));
         } else {
             // Check 1Password CLI and authenticate
             await ensureOpAuthenticated({ verbose });
@@ -123,7 +126,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                     itemResult = await editSecureNote({
                         vault,
                         title: itemName,
-                        fields: variables,
+                        fields: secretVariables,
                         secret,
                         verbose,
                         itemId: existingItemId,
@@ -132,7 +135,7 @@ export async function runConvert(options: ConvertOptions): Promise<void> {
                     itemResult = await createSecureNote({
                         vault,
                         title: itemName,
-                        fields: variables,
+                        fields: secretVariables,
                         secret,
                         verbose,
                     });

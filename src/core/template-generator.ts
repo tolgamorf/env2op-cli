@@ -45,7 +45,7 @@ export function generateTemplateHeader(templateFileName: string): string[] {
         `#  ${templateFileName} — 1Password Secret References`,
         "#",
         "#  This template contains references to secrets stored in 1Password.",
-        "#  The actual values are not stored here — only secret references.",
+        "#  Secret values are not stored here — only references to them.",
         "#",
         `#  To generate ${envFileName} with real values:`,
         `#    op2env ${templateFileName}`,
@@ -115,6 +115,16 @@ export function generateTemplateContent(options: TemplateOptions, templateFileNa
                 outputLines.push(line.content);
                 break;
             case "variable": {
+                // An empty value is written as a literal empty assignment, never a reference:
+                // 1Password stores no empty field, so `op://.../KEY` could never resolve, and
+                // dropping the line instead would change its meaning wherever this file overrides
+                // another (`KEY=` in .env.development.local is not the same as inheriting .env's
+                // KEY). `op inject` passes a line with no reference through unchanged, so
+                // op2env writes `KEY=` straight back. An empty value is not a secret.
+                if (line.value === "") {
+                    outputLines.push(`${line.key}=`);
+                    break;
+                }
                 const fieldId = fieldIds[line.key] ?? line.key;
                 outputLines.push(`${line.key}=op://${vaultId}/${itemId}/${fieldId}`);
                 break;

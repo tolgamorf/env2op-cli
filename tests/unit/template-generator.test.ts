@@ -57,6 +57,41 @@ describe("generateTemplateContent", () => {
         expect(content).toContain("KEY1=op://vault123/item456/KEY1");
     });
 
+    test("writes an empty value as a literal empty assignment, not a reference", () => {
+        // 1Password holds no empty field, so a reference could never resolve; and dropping the
+        // line would let a layered env file inherit the value it was overriding with empty.
+        const content = generateTemplateContent(
+            createOptions({
+                lines: [
+                    { type: "comment", content: "# Empty on purpose: no mail locally." },
+                    { type: "variable", key: "COURIER_API_KEY", value: "" },
+                    { type: "variable", key: "KEY1", value: "value1" },
+                ],
+                fieldIds: { COURIER_API_KEY: "f-empty", KEY1: "field1" },
+            }),
+            ".env.tpl",
+        );
+
+        expect(content).toContain(
+            "# Empty on purpose: no mail locally.\nCOURIER_API_KEY=\nKEY1=op://vault123/item456/field1",
+        );
+        expect(content).not.toContain("COURIER_API_KEY=op://");
+    });
+
+    test("switches between literal empty and reference as the value is filled in or cleared", () => {
+        // Each push regenerates the template from the current .env and the field IDs 1Password
+        // returned, so nothing from an earlier push where the value was empty carries over.
+        const push = (value: string, fieldIds: Record<string, string>) =>
+            generateTemplateContent(
+                createOptions({ lines: [{ type: "variable", key: "COURIER_API_KEY", value }], fieldIds }),
+                ".env.tpl",
+            );
+
+        expect(push("", {})).toContain("COURIER_API_KEY=\n");
+        expect(push("sk_live", { COURIER_API_KEY: "f-new" })).toContain("COURIER_API_KEY=op://vault123/item456/f-new");
+        expect(push("", {})).not.toContain("COURIER_API_KEY=op://");
+    });
+
     test("includes version header", () => {
         const options = createOptions();
         const content = generateTemplateContent(options, ".env.tpl");
@@ -76,7 +111,7 @@ describe("generateTemplateContent", () => {
         const content = generateTemplateContent(options, ".env.tpl");
 
         expect(content).toContain("1Password Secret References");
-        expect(content).toContain("secret references");
+        expect(content).toContain("only references to them");
     });
 
     test("includes repository link", () => {

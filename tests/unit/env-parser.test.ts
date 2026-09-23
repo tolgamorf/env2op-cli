@@ -91,6 +91,18 @@ describe("parseEnvFile", () => {
             expect(dbPort?.value).toBe("5432");
         });
 
+        test("reads an empty value followed by an inline comment as empty", async () => {
+            const result = await parseEnvFile(join(fixturesDir, "comments.env"));
+            const dbPassword = result.variables.find((v) => v.key === "DB_PASSWORD");
+            expect(dbPassword?.value).toBe("");
+        });
+
+        test("keeps # that is not preceded by whitespace as part of the value", async () => {
+            const result = await parseEnvFile(join(fixturesDir, "comments.env"));
+            const dbColor = result.variables.find((v) => v.key === "DB_COLOR");
+            expect(dbColor?.value).toBe("#336699");
+        });
+
         test("preserves original comment content including #", async () => {
             const result = await parseEnvFile(join(fixturesDir, "comments.env"));
             const firstComment = result.lines.find((l) => l.type === "comment");

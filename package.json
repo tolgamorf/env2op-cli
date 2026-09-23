@@ -68,13 +68,13 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
+    "@clack/prompts": "^1.8.1",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.11",
+    "@biomejs/biome": "2.5.14",
     "@tsconfig/bun": "^1.0.11",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.2",
     "bunup": "^0.16.32",
     "typescript": "^7.0.2"
   }

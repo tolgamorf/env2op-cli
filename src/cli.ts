@@ -1,7 +1,7 @@
 import pc from "picocolors";
 import { runConvert } from "./commands/convert";
 import { runUpdate } from "./commands/update";
-import { parseSecretType, SecretType } from "./core/types";
+import { parseSecretType, SECRET_TYPES } from "./core/types";
 import { getCliVersion, maybeShowUpdateNotification } from "./lib/update";
 import { showUpdateNotification } from "./lib/update-prompts";
 import { parseArgs } from "./utils/args";
@@ -60,7 +60,7 @@ if (positional.length < 3) {
 }
 
 // Bare `--secret` is the legacy spelling of `--secret=password`
-const secretValue = options.secret ?? (flags.has("secret") ? SecretType.password : SecretType.text);
+const secretValue = options.secret ?? (flags.has("secret") ? "password" : "text");
 const secret = parseSecretType(secretValue);
 
 if (!secret) {
@@ -105,7 +105,8 @@ ${pc.bold("OPTIONS")}
   ${pc.cyan("-f, --force")}     Skip confirmation prompts
   ${pc.cyan("    --dry-run")}   Preview actions without executing
   ${pc.cyan("    --secret")}    Field type: text (default), password, or auto
-                  ${pc.dim("auto conceals fields whose name looks secret (KEY, TOKEN, SECRET, ...)")}
+                  ${pc.dim("auto hides fields whose name looks secret (KEY, TOKEN, PASSWORD, ...)")}
+                  ${pc.dim("or whose value is a URL with a password in it")}
   ${pc.cyan("    --verbose")}   Show op CLI output
   ${pc.cyan("    --update")}    Check for and install updates
   ${pc.cyan("-v, --version")}   Show version
@@ -136,9 +137,7 @@ ${pc.bold("DOCUMENTATION")}
 }
 
 function showInvalidSecretError(value: string): void {
-    const allowed = Object.values(SecretType)
-        .map((type) => pc.yellow(type))
-        .join(", ");
+    const allowed = SECRET_TYPES.map((type) => pc.yellow(type)).join(", ");
 
     console.log(`
 ${pc.red(pc.bold("Error:"))} Invalid value for ${pc.cyan("--secret")}: ${pc.yellow(value)}

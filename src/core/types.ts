@@ -43,22 +43,21 @@ export interface ParseResult {
 }
 
 /**
- * How env values are stored in the 1Password item
+ * How env values are stored in the 1Password item:
+ * - `text`: every field is a visible text field
+ * - `password`: every field is a concealed password field
+ * - `auto`: concealed or visible per field, from its name and value (see determineFieldType)
  */
-export enum SecretType {
-    /** Every field is a visible text field */
-    text = "text",
-    /** Every field is a concealed password field */
-    password = "password",
-    /** Concealed or visible per field, based on the variable name */
-    auto = "auto",
-}
+export type SecretType = "text" | "password" | "auto";
+
+/** Every SecretType, in the order the CLI lists them */
+export const SECRET_TYPES: readonly SecretType[] = ["text", "password", "auto"];
 
 /** Human-readable description of each secret type, used in CLI output */
 export const SECRET_TYPE_LABELS: Record<SecretType, string> = {
-    [SecretType.text]: "text (visible)",
-    [SecretType.password]: "password (hidden)",
-    [SecretType.auto]: "auto detect (hidden or visible)",
+    text: "text (visible)",
+    password: "password (hidden)",
+    auto: "auto (hidden when the name or value looks secret)",
 };
 
 /**
@@ -66,7 +65,18 @@ export const SECRET_TYPE_LABELS: Record<SecretType, string> = {
  * Returns null for unrecognised values so callers can report the error.
  */
 export function parseSecretType(value: string): SecretType | null {
-    return Object.values(SecretType).includes(value as SecretType) ? (value as SecretType) : null;
+    return (SECRET_TYPES as readonly string[]).includes(value) ? (value as SecretType) : null;
+}
+
+/**
+ * Normalise a `secret` option. A boolean is the form it took before SecretType existed
+ * (true: password, false: text) and is still accepted from library callers.
+ */
+export function toSecretType(secret: boolean | SecretType): SecretType {
+    if (typeof secret === "boolean") {
+        return secret ? "password" : "text";
+    }
+    return secret;
 }
 
 /**
@@ -79,8 +89,8 @@ export interface CreateItemOptions {
     title: string;
     /** Fields to store */
     fields: EnvVariable[];
-    /** Store all as password type (hidden) or text (visible) or detect from environment variable name */
-    secret: SecretType;
+    /** Field type; `true`/`false` are the older spelling of `"password"`/`"text"` */
+    secret: boolean | SecretType;
 }
 
 /**
@@ -121,8 +131,8 @@ export interface ConvertOptions {
     output?: string;
     /** Preview mode - don't make changes */
     dryRun: boolean;
-    /** Store fields as text or password type, or auto-detect from environment variable name */
-    secret: SecretType;
+    /** Field type; `true`/`false` are the older spelling of `"password"`/`"text"` */
+    secret: boolean | SecretType;
     /** Skip confirmation prompts */
     force: boolean;
     /** Show op CLI output */

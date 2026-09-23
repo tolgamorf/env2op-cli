@@ -12,6 +12,7 @@ export {
     checkSignedIn,
     createSecureNote,
     createVault,
+    determineFieldType,
     editSecureNote,
     itemExists,
     signIn,
@@ -34,6 +35,7 @@ export type {
     EnvVariable,
     ParseResult,
     Quote,
+    SecretType,
     TemplateOptions,
 } from "./core/types";
 

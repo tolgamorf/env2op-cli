@@ -141,7 +141,7 @@ env2op .env.production Personal "MyApp" --dry-run
 # Store all fields as password type (hidden in 1Password)
 env2op .env.production Personal "MyApp" --secret=password
 
-# Conceal only the fields whose name looks secret (API_KEY, DB_PASSWORD, ...)
+# Hide only the fields whose name or value looks secret (API_KEY, DB_PASSWORD, ...)
 env2op .env.production Personal "MyApp" --secret=auto
 
 # Skip confirmation prompts (useful for scripts/CI)
@@ -216,9 +216,21 @@ By default, all fields are stored as `text` type (visible in 1Password). Use `--
 |--------------------:|-------------------------------------------------------------------------------------------------------------|
 | `--secret=text`     | All fields are `text` (visible). The default.                                                               |
 | `--secret=password` | All fields are `password` (hidden by default, revealed on click).                                           |
-| `--secret=auto`     | Fields whose name contains `token`, `cert`, `key`, `password`, `encryption`, `secret` or `credential` are stored as `password`; the rest as `text`. |
+| `--secret=auto`     | Fields whose name or value looks secret are stored as `password`; the rest as `text`. See below.           |
 
-Bare `--secret` is accepted as a shorthand for `--secret=password`.
+Bare `--secret` is accepted as a shorthand for `--secret=password`. A type is given only with `=`:
+`--secret auto` is the bare flag followed by an argument.
+
+`--secret=auto` hides a field when either of these is true:
+
+- **Its name has a secret-looking part.** Names are split into parts at `_` and at camelCase, so
+  `API_KEY`, `apiKey`, `DB_PASS`, `SENTRY_DSN`, `SSH_PRIVATE_KEY` and `ACCESSTOKEN` are hidden,
+  while `MONKEY_MODE`, `KEYBOARD_LAYOUT` and `PASSENGER_COUNT` are not.
+- **Its value is a URL with a password in it,** such as `DATABASE_URL=postgres://app:s3cret@db/app`.
+  `DATABASE_URL=postgres://localhost/app` stays visible.
+
+Hidden or not, every field is encrypted in 1Password; the type only decides whether it shows on screen.
+Use `--dry-run` to see which fields would be hidden.
 
 ## Example
 

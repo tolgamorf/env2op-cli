@@ -4,6 +4,10 @@ import { runUpdate } from "./commands/update";
 import { getCliVersion, maybeShowUpdateNotification } from "./lib/update";
 import { showUpdateNotification } from "./lib/update-prompts";
 import { parseArgs } from "./utils/args";
+import { exitOnInterrupt } from "./utils/interrupt";
+
+// Ctrl-C and SIGTERM stop the command wherever it is (see exitOnInterrupt)
+exitOnInterrupt();
 
 const { flags, positional, options, errors } = parseArgs(process.argv.slice(2), [
     "h",

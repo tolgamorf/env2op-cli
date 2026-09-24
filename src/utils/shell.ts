@@ -1,6 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import { spawn } from "node:child_process";
 import pc from "picocolors";
+import { isInterrupted } from "./interrupt";
 
 interface ExecResult {
     stdout: string;
@@ -70,10 +71,18 @@ function collectOutput(proc: ChildProcess, verbose: boolean, hideStdout = false)
     });
 }
 
+/** What a command "returns" when it is not started because the process is being interrupted */
+function interruptedResult(): ExecResult {
+    return { stdout: "", stderr: "interrupted", exitCode: 1 };
+}
+
 /**
  * Execute a shell command and return the result
  */
 export async function exec(command: string, args: string[] = [], options: ExecOptions = {}): Promise<ExecResult> {
+    if (isInterrupted()) {
+        return interruptedResult();
+    }
     const { verbose = false, hideStdout = false } = options;
     const fullCommand = `${command} ${args.map(quoteArg).join(" ")}`;
 
@@ -100,6 +109,9 @@ export async function execWithStdin(
     args: string[] = [],
     options: ExecWithStdinOptions,
 ): Promise<ExecResult> {
+    if (isInterrupted()) {
+        return interruptedResult();
+    }
     const { stdin: stdinContent, verbose = false, hideStdout = false } = options;
 
     if (verbose) {

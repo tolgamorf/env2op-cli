@@ -7,7 +7,7 @@ import pc from "picocolors";
 import type { PackageManagerInfo } from "./package-manager";
 import type { UpdateCheckResult } from "./update";
 
-export type UpdateChoice = "update" | "skip" | "later";
+export type UpdateChoice = "update" | "skip" | "later" | "cancel";
 
 // Unicode box drawing characters
 const S_BAR = "\u2502";
@@ -40,7 +40,7 @@ export async function askToUpdate(result: UpdateCheckResult): Promise<UpdateChoi
     });
 
     if (p.isCancel(response)) {
-        return "later";
+        return "cancel";
     }
 
     return response as UpdateChoice;

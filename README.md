@@ -203,11 +203,15 @@ bundled at a pinned version. `--update` still works.
 
 ### Exit codes
 
-| Code | Meaning |
-|-----:|---------|
-| `0`  | Done: the push or pull completed |
-| `1`  | Failed |
-| `2`  | Declined: a confirmation prompt was answered No or cancelled (Ctrl-C, Escape), or there was no terminal to answer it. Nothing was written. Pass `-f`/`--force` to skip the prompts in scripts |
+| Code  | Meaning |
+|------:|---------|
+| `0`   | Done: the push or pull completed |
+| `1`   | Failed |
+| `2`   | Declined: a confirmation prompt was answered No, or there was no terminal to answer it. Nothing was written. Pass `-f`/`--force` to skip the prompts in scripts |
+| `130` | Cancelled: Escape or Ctrl-C at a prompt (nothing written), or Ctrl-C while the command runs (it stops at once; an `op` call already under way may still complete) |
+
+A script running env2op over several files can skip a file on `2` and stop the whole run on `130`.
+SIGTERM ends the command with `143`.
 
 ## How It Works
 

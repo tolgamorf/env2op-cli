@@ -15,6 +15,7 @@ import {
     showUpdateSuccess,
     showUpToDate,
 } from "../lib/update-prompts";
+import { exitCancelled, exitDeclined } from "../utils/prompts";
 
 export interface UpdateOptions {
     force?: boolean; // --force: Skip confirmation
@@ -54,7 +55,16 @@ export async function runUpdate(options: UpdateOptions): Promise<void> {
 
     // Ask user unless --force
     if (!force) {
+        if (!process.stdin.isTTY) {
+            p.log.warn("No terminal to answer; pass -f/--force to update without asking");
+            exitDeclined();
+        }
+
         const choice = await askToUpdate(result);
+
+        if (choice === "cancel") {
+            exitCancelled("Cancelled");
+        }
 
         if (choice === "skip") {
             skipVersion(result.latestVersion);

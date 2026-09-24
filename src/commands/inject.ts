@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { ensureOpAuthenticated } from "../core/auth";
 import { stripHeaders } from "../core/env-parser";
@@ -11,6 +11,7 @@ import { errors } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { confirmOrExit } from "../utils/prompts";
 import { exec } from "../utils/shell";
+import { removeTempFile, trackTempFile } from "../utils/temp-files";
 import { withMinTime } from "../utils/timing";
 
 /**
@@ -35,16 +36,13 @@ function deriveOutputPath(templatePath: string): string {
  */
 function writeMaskedTemplate(templateFile: string, contents: string): string {
     const maskedPath = `${templateFile}.env2op-${process.pid}.tmp`;
+    trackTempFile(maskedPath);
     writeFileSync(maskedPath, contents, "utf-8");
     return maskedPath;
 }
 
 function cleanupMaskedTemplate(maskedPath: string): void {
-    try {
-        unlinkSync(maskedPath);
-    } catch {
-        // ignore cleanup errors
-    }
+    removeTempFile(maskedPath);
 }
 
 /**

@@ -1,8 +1,9 @@
-import { unlinkSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { errors } from "../utils/errors";
 import { exec, execWithStdin } from "../utils/shell";
+import { removeTempFile, trackTempFile } from "../utils/temp-files";
 import {
     type CreateItemOptions,
     type CreateItemResult,
@@ -115,17 +116,15 @@ let tempCounter = 0;
 
 function writeTempTemplate(template: OpFieldsTemplate): string {
     const filePath = join(tmpdir(), `env2op-template-${process.pid}-${++tempCounter}.json`);
-    // It holds every value in plain text, so keep it readable by the owner only
+    // It holds every value in plain text, so keep it readable by the owner only, and make sure
+    // it is deleted even when Ctrl-C ends the process before the `finally` that removes it
+    trackTempFile(filePath);
     writeFileSync(filePath, JSON.stringify(template), { encoding: "utf-8", mode: 0o600 });
     return filePath;
 }
 
 function cleanupTempFile(filePath: string): void {
-    try {
-        unlinkSync(filePath);
-    } catch {
-        // ignore cleanup errors
-    }
+    removeTempFile(filePath);
 }
 
 interface OpFieldsTemplate {

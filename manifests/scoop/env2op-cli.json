@@ -1,12 +1,12 @@
 {
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Push .env files to 1Password and pull them back",
   "homepage": "https://github.com/tolgamorf/env2op-cli",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v0.4.1/env2op-windows-x64.zip",
-      "hash": "06fa21bbfe9b759c56d726585edb33aec7faa9d42bc014c8cd255054a402dd9a"
+      "url": "https://github.com/tolgamorf/env2op-cli/releases/download/v0.5.0/env2op-windows-x64.zip",
+      "hash": "9f8b5cb92b066dd791b4cb01119c0a48437ac6a21cd4ba7230c6b8e7f2d816fe"
     }
   },
   "bin": [
